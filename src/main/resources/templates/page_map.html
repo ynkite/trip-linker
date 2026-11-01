@@ -1547,6 +1547,9 @@
       const tripId = window._currentTripId;
       if (!tripId || _q.length === 0) return;
 
+      // 고정 경로 모드면 서버에 요청하지 않고 바로 안내만 한다.
+      if (typeof demoBlockReplace === 'function' && demoBlockReplace()) return;
+
       const btn = document.getElementById('btnAll');
       const originalText = btn.innerHTML; // 원래 버튼 텍스트('✅ 전체 교체하기') 저장
       const loadingOverlay = document.getElementById('replaceLoadingOverlay');
@@ -1569,7 +1572,7 @@
           }, 1500);
 
         } else {
-          toast('<span style="color: black;">⚠️ 교체처리에 실패했습니다.</span>');
+          toast('<span style="color: black;">⚠️ ' + (res.message || '교체처리에 실패했습니다.') + '</span>');
           if (loadingOverlay) loadingOverlay.style.display = 'none';
           btn.innerHTML = originalText;
           btn.disabled = false;
@@ -1720,6 +1723,9 @@
 
       const tripId = window._currentTripId || sessionStorage.getItem('plannerDraftId');
       if (!tripId) { toast('플랜 정보가 없습니다.'); return; }
+
+      // 실내 일정 교체도 AI 호출이므로 고정 경로 모드에서는 막는다.
+      if (typeof demoBlockReplace === 'function' && demoBlockReplace()) return;
 
       // 로딩을 알리기 위해 임시 토스트 창 띄우기
       toast(`🤖 AI가 Day ${dayNum} 일정을 실내 코스로 전면 교체 중입니다...`, 6000);

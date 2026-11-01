@@ -24,6 +24,14 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
     //내 여행 일정 목록 (최신순)
     List<TravelPlan> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    // 고정 경로 모드(DemoRouteService)의 원본 플랜 자동 탐색.
+    // 여행지에 키워드가 들어가고 경로가 저장된 플랜 중 가장 최근에 수정된 것.
+    @Query("SELECT t FROM TravelPlan t " +
+           "WHERE t.destination LIKE CONCAT('%', :keyword, '%') " +
+           "  AND t.routeJson IS NOT NULL AND t.routeJson <> '' " +
+           "ORDER BY t.updatedAt DESC")
+    List<TravelPlan> findDemoSource(@Param("keyword") String keyword, Pageable pageable);
+
     // 공개 플랜 목록 (커뮤니티 스크랩 대상)
     List<TravelPlan> findByIsPublicOrderByCreatedAtDesc(int isPublic);
 

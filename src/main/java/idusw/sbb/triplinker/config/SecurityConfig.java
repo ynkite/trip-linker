@@ -87,6 +87,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/trips/*/routes").permitAll()        // 공유 링크 읽기 전용
                         .requestMatchers(HttpMethod.GET, "/api/trips/*/input-form").permitAll()     // 비회원 인원수/이동수단 정보
                         .requestMatchers(HttpMethod.GET, "/api/curations").permitAll()
+                        // 고정 경로 모드 여부. 비로그인 화면에서도 안내 바를 띄워야 하고
+                        // 내려주는 값이 on/off 와 안내 문구뿐이라 인증을 걸지 않는다.
+                        .requestMatchers(HttpMethod.GET, "/api/demo-mode").permitAll()
 
 
                         // 관리자 전용 기능

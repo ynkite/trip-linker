@@ -754,6 +754,13 @@
                     }
                     const draftRoute = JSON.parse(cleanJson);
 
+                    // ★고정 경로 모드: 저장된 경로를 손대지 않고 그대로 보여준다.
+                    //   검수·보정 단계를 타면 동선이 재정렬되어 원본과 달라지므로 전부 건너뛴다.
+                    if (res.data.demo) {
+                        _finalizePlannerRoute(draftRoute, btn);
+                        return;
+                    }
+
                     // ★50km 초과 장소 알림 (한 번에 모아서)
                     if (over50.length > 0) {
                         _hideGenLoading();

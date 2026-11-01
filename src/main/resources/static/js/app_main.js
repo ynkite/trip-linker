@@ -255,6 +255,44 @@ async function goHomeRefresh() {
 }
 
 // 지정한 페이지로 "새로고침하며" 진입한다.
+/* ─── 고정 경로 모드 ────────────────────────────────────────────────
+ * 서버가 APP_DEMO_ROUTE_ENABLED 로 켜고 끈다. 켜져 있으면 경로 화면에
+ * 상단 안내 바를 띄우고, 교체 버튼은 서버에 요청하지 않고 바로 안내만 한다.
+ * ───────────────────────────────────────────────────────────────── */
+window._demoMode = null;
+
+async function loadDemoMode() {
+    if (window._demoMode !== null) return window._demoMode;
+    try {
+        const r = await fetch('/api/demo-mode');
+        window._demoMode = await r.json();
+    } catch (e) {
+        window._demoMode = { enabled: false };   // 조회 실패 시 평소대로 동작시킨다
+    }
+    return window._demoMode;
+}
+
+async function updateDemoNotice(pageId) {
+    const bar = document.getElementById('demoNotice');
+    if (!bar) return;
+    const mode = await loadDemoMode();
+    const show = !!(mode && mode.enabled) && pageId === 'map';
+    if (show && mode.notice) bar.textContent = mode.notice;
+    bar.style.display = show ? 'block' : 'none';
+}
+
+/** 교체 계열 버튼에서 호출. 고정 경로 모드면 안내만 하고 true를 돌려준다. */
+function demoBlockReplace() {
+    const mode = window._demoMode;
+    if (!mode || !mode.enabled) return false;
+    toast(mode.blocked || 'API 비용 문제로 교체는 막아뒀습니다');
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    try { updateDemoNotice(sessionStorage.getItem('currentPage')); } catch (e) {}
+});
+
 async function goRefresh(id) {
     const prevPage = sessionStorage.getItem('currentPage');
     if (prevPage === 'map') {
@@ -319,6 +357,7 @@ async function go(id, addToHistory) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const pg = document.getElementById('page-' + id);
     if (pg) pg.classList.add('active');
+    updateDemoNotice(id);
 
     if (id === 'map') {
         setTimeout(function() {
@@ -2983,6 +3022,9 @@ async function execAllReplace() {
     const tripId = window._currentTripId;
     if (!tripId || _q.length === 0) return;
 
+    // 고정 경로 모드면 서버에 요청하지 않고 바로 안내만 한다.
+    if (demoBlockReplace()) return;
+
     const btn = document.getElementById('btnAll');
     const originalText = btn ? btn.innerHTML : '';
     const loadingOverlay = document.getElementById('replaceLoadingOverlay');
@@ -3014,7 +3056,7 @@ async function execAllReplace() {
             }, 1500);
 
         } else {
-            toast('<span style="color: black;">⚠️ 교체처리에 실패했습니다.</span>');
+            toast('<span style="color: black;">⚠️ ' + (res.message || '교체처리에 실패했습니다.') + '</span>');
             if (loadingOverlay) loadingOverlay.style.display = 'none';
             if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
         }
