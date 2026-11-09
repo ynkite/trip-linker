@@ -15,7 +15,7 @@ import java.util.List;
  *   숙박      1실 1박 범위 × 방 수(2인 1실) × 박 수. 1실 1박은 관광공사 공개 요금 → 같은 지역 표본. 둘 다 없으면 미산정.
  *   식비      백반 1끼 ~ 그 2배(관광지 식당 가정) × 끼니 × 인원.
  *   현지 이동 자차 = 일정의 카카오 거리 ÷ 연비 9~14km/L × 유가, 대중교통 = 구간 × 인원 × 기본요금 ~ 일정 운임. 거리 · 운임이 없으면 미산정.
- *   오가는 교통 출발지와 여행지 시도가 다르면 「미산정」 줄로 따로 보인다(운임 자료 미연결).
+ *   오가는 교통 출발지와 여행지 시도가 다르면 거리 × 공개 운임 단가의 「추정」 줄이 따로 보인다(IntercityFare, 키 불필요).
  *   입장료    관광공사 이용요금을 찾은 곳만 그 값 × 인원. 못 찾은 곳은 미산정.
  * 근거 없는 값을 0원이나 임의 범위로 메우지 않는다. 미산정은 합계에서 빠지고 개수로 알린다.
  * 사용자 예산은 계산에 넣지 않는다 — 결과와 비교만 한다(예전 AI 프롬프트는 합계를 예산의 90~100% 에 맞췄다).
@@ -88,11 +88,8 @@ public final class BudgetCalculator {
                 Source.ASSUMED, PublicPrices.MEAL_SOURCE, PublicPrices.MEAL_AS_OF));
 
         // ── 오가는 교통 ──
-        if (in.departureSido() != null && in.sido() != null && !in.departureSido().equals(in.sido())) {
-            items.add(missing("TRANSPORT", in.departureSido() + " ↔ " + in.sido() + " 왕복 교통",
-                    in.car() ? "출발지 ~ 여행지 도로 거리 · 통행료 자료를 아직 연결하지 않음"
-                             : "KTX · 고속버스 · 항공 운임 자료를 아직 연결하지 않음"));
-        }
+        Item trip = IntercityFare.quote(in.departureSido(), in.sido(), people, in.car());
+        if (trip != null) items.add(trip);
 
         // ── 현지 이동 ──
         if (in.car()) {
@@ -147,9 +144,10 @@ public final class BudgetCalculator {
         List<String> notes = new ArrayList<>();
         if (!in.tourApi()) notes.add("관광공사 키(TOUR_API_KEY)가 없어 숙박 · 입장료를 조회하지 않았습니다.");
         if (missing > 0) notes.add("미산정 " + missing + "개는 합계에 넣지 않았습니다. 합계는 계산한 항목만의 범위입니다.");
+        if (trip != null) notes.add("출발지 ↔ 여행지 교통은 거리 × 공개 운임 단가로 낸 추정입니다. 실제 운임(TAGO 조회)은 키가 없어 연결하지 않았습니다.");
         notes.add("실제 예약 요금과 다를 수 있습니다. 숙박은 관광공사에 공개된 객실 최저요금 기준이며 예약 확정가가 아닙니다.");
 
-        List<String> excluded = List.of("고속도로 통행료 · 주차비", "택시 · 렌터카", "카페 · 간식 · 쇼핑 · 기념품");
+        List<String> excluded = List.of("현지 통행료 · 주차비", "택시 · 렌터카", "카페 · 간식 · 쇼핑 · 기념품");
 
         return new BudgetEstimate(items, min, max, share, confidence, missing,
                 in.userBudget(), budgetCheck(in.userBudget(), min, max, missing), excluded, notes, in.tourApi());

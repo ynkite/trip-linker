@@ -35,4 +35,19 @@ public final class PublicPrices {
 
     /** 대중교통 1구간 1인 기본요금(원) — 일정 생성 코드의 운임식(기본 1,500 + 10km 넘는 km 당 100)과 같은 가정. */
     public static final long TRANSIT_BASE_FARE = 1_500;
+
+    /** 시도 간 도로 거리 = 시도청 직선거리 × 이 계수(가정). */
+    public static final double ROAD_FACTOR = 1.2;
+    /** 고속버스 일반 · KTX 일반실 1km 당 운임(원) — 서울~부산 대표 운임을 도로 거리로 나눈 값(가정, 원문 미확인). */
+    public static final long BUS_PER_KM = 60;
+    public static final long KTX_PER_KM = 150;
+    /** 가까운 시도 사이에도 편도 1인 최소 운임(원). */
+    public static final long FARE_FLOOR = 3_000;
+    /** 제주 ↔ 육지 항공 편도 1인 범위(원) — 저가 ~ 일반 운임 대표값(가정, 원문 미확인). */
+    public static final long FLIGHT_MIN = 30_000;
+    public static final long FLIGHT_MAX = 100_000;
+    /** 승용차 고속도로 통행료 1km 당(원) — 가정, 원문 미확인. */
+    public static final long TOLL_PER_KM = 45;
+    public static final String FARE_SOURCE = "공개 운임표 대표 구간 환산 단가(TAGO 미조회 · 원문 미확인)";
+    public static final String FARE_AS_OF = "2026-11-09";
 }

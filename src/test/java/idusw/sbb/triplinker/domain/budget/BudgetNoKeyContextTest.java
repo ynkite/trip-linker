@@ -57,11 +57,11 @@ class BudgetNoKeyContextTest {
                     assertEquals(Source.ASSUMED, car.source(), "일정의 카카오 거리 50km × 유가 가정");
                     assertEquals(Math.round(50 / 14.0 * 1_855), car.min());
                     assertTrue(e.items().stream().anyMatch(i -> i.label().contains("요금 모름 2곳")));
-                    assertTrue(e.items().stream().anyMatch(i -> i.label().equals("서울 ↔ 제주 왕복 교통")));
+                    assertTrue(e.items().stream().anyMatch(i -> i.label().equals("서울 ↔ 제주 왕복 교통(추정)") && i.source() == Source.ASSUMED));
                     assertTrue(e.notes().get(0).contains("TOUR_API_KEY"));
-                    assertEquals(3, e.missing());
+                    assertEquals(2, e.missing());
                     assertEquals("낮음", e.confidence());
-                    assertEquals(9_625L * 7 * 2 + Math.round(50 / 14.0 * 1_855), e.min());
+                    assertEquals(9_625L * 7 * 2 + Math.round(50 / 14.0 * 1_855) + 30_000L * 2 * 2, e.min());
                     System.out.println("NOKEY_CALLS=" + client.httpCalls() + " range=" + e.min() + "~" + e.max());
                     java.nio.file.Path out = java.nio.file.Path.of("build", "budget-sample-nokey.json");
                     java.nio.file.Files.createDirectories(out.getParent());

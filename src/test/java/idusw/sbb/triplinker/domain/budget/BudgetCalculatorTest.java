@@ -108,15 +108,19 @@ class BudgetCalculatorTest {
         assertEquals(4_000, tour.min());
         assertEquals(6_000, tour.max());
         assertEquals(Source.NOT_ESTIMATED, byLabel(e, "요금 모름 1곳").source());
-        assertEquals(Source.NOT_ESTIMATED, byLabel(e, "서울 ↔ 제주 왕복").source(), "출발지 왕복은 현지 이동과 따로, 미산정");
+        Item air = byLabel(e, "서울 ↔ 제주 왕복");
+        assertEquals(Source.ASSUMED, air.source(), "왕복 교통은 현지 이동과 따로, 항공 단가 추정");
+        assertEquals(30_000L * 2 * 2, air.min());           // 편도 1인 3~10만 × 2명 × 왕복
+        assertEquals(100_000L * 2 * 2, air.max());
+        assertTrue(air.label().contains("추정") && air.basis().startsWith("추정"));
 
-        assertEquals(120_000 + 134_750 + 13_250 + 4_000, e.min());       // 272,000 — 미산정은 합계 제외
-        assertEquals(240_000 + 269_500 + 20_611 + 6_000, e.max());       // 536,111
-        assertEquals(2, e.missing());
-        // 관광공사 자료(숙박 가운데 180,000 + 입장료 5,000) ÷ 계산한 항목 가운데 합 404,055.5 = 45.7% → 45
-        assertEquals(45, e.publicShare());
-        assertEquals("보통", e.confidence());
-        assertEquals("정한 예산 500,000원이 예상 범위 안에 있습니다. (미산정 2개 제외)", e.budgetCheck());
+        assertEquals(120_000 + 134_750 + 13_250 + 4_000 + 120_000, e.min());       // 392,000 — 미산정은 합계 제외
+        assertEquals(240_000 + 269_500 + 20_611 + 6_000 + 400_000, e.max());       // 936,111
+        assertEquals(1, e.missing());
+        // 관광공사 자료 185,000 ÷ 계산한 항목 가운데 합 664,055.5 = 27.86% → 27
+        assertEquals(27, e.publicShare());
+        assertEquals("낮음", e.confidence());
+        assertEquals("정한 예산 500,000원이 예상 범위 안에 있습니다. (미산정 1개 제외)", e.budgetCheck());
     }
 
     @Test
@@ -181,6 +185,51 @@ class BudgetCalculatorTest {
         assertEquals(3, BudgetCalculator.rooms(5));
         assertEquals(1, BudgetCalculator.rooms(1));
         assertEquals(2, BudgetCalculator.mealCount(1));
+    }
+
+    private static Input trip(String dep, String dest, int people, boolean car) {
+        return new Input(dest, dep, 0, 1, people, car, null, List.of(), 0, 0, 0, 0, null, false);
+    }
+
+    @Test
+    @DisplayName("서울 → 부산 2인 대중교통 왕복 — 도로 거리 × 고속버스 60원 ~ KTX 150원, 키 없이 추정")
+    void seoulBusanTransitRoundTrip() {
+        double km = IntercityFare.roadKm("서울", "부산");
+        assertTrue(km > 380 && km < 400, "서울~부산 도로 거리 ≈ 390km: " + km);
+        Item t = byLabel(BudgetCalculator.compute(trip("서울", "부산", 2, false)), "서울 ↔ 부산 왕복");
+        assertEquals(Math.round(km * 60) * 2 * 2, t.min());      // 고속버스 일반 ≈ 서울~부산 2만 3천원대
+        assertEquals(Math.round(km * 150) * 2 * 2, t.max());     // KTX ≈ 5만 8천원대
+        assertEquals(Source.ASSUMED, t.source());
+        assertTrue(t.min() > 90_000 && t.max() < 240_000, t.min() + "~" + t.max());
+    }
+
+    @Test
+    @DisplayName("서울 → 부산 자차 왕복 — 유류비(연비 9~14) ~ 유류비 + 통행료, 사람 수와 무관")
+    void seoulBusanCarRoundTrip() {
+        double km = IntercityFare.roadKm("서울", "부산");
+        Item a = byLabel(BudgetCalculator.compute(trip("서울", "부산", 2, true)), "왕복");
+        Item b = byLabel(BudgetCalculator.compute(trip("서울", "부산", 5, true)), "왕복");
+        assertEquals(Math.round(km * 2 / 14.0 * 1_855), a.min());
+        assertEquals(Math.round(km * 2 / 9.0 * 1_855) + Math.round(km * 2 * 45), a.max());
+        assertEquals(a.min(), b.min());
+        assertEquals(a.max(), b.max());
+    }
+
+    @Test
+    @DisplayName("왕복 교통 줄이 없는 경우 — 같은 시도 · 출발지 모름 · 모르는 시도")
+    void noRoundTripLine() {
+        for (Input in : List.of(trip("서울", "서울", 2, false), trip(null, "부산", 2, false), trip("서울", null, 2, false)))
+            assertTrue(BudgetCalculator.compute(in).items().stream().noneMatch(x -> x.label().contains("↔")));
+        assertEquals(-1, IntercityFare.roadKm("서울", "평양"));
+        assertEquals(IntercityFare.roadKm("서울", "부산"), IntercityFare.roadKm("부산", "서울"));
+    }
+
+    @Test
+    @DisplayName("가까운 시도 대중교통은 편도 3천원 아래로 내려가지 않는다 (서울 → 인천)")
+    void nearbyTransitHasFloor() {
+        Item t = byLabel(BudgetCalculator.compute(trip("서울", "인천", 1, false)), "왕복");
+        assertTrue(t.min() >= 3_000L * 2, "" + t.min());
+        assertTrue(t.max() >= t.min());
     }
 
     @Test
