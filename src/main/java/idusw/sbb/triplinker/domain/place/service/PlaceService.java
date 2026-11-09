@@ -29,7 +29,6 @@ public class PlaceService {
     private static final Pattern RATING_PATTERN = Pattern.compile("([\\d.]+)\\s*$");
 
     // "숙소 · ₩180,000" 에서 단가(×N 이전 금액) 추출
-    private static final Pattern UNIT_PRICE_PATTERN = Pattern.compile("₩([\\d,]+)");
 
     /**
      * routeJson에서 장소를 파싱해 PLACES에 저장
@@ -122,7 +121,7 @@ public class PlaceService {
                 .address(address)
                 .externalLink(externalLink)
                 .externalRating(parseRatingFromStars(stars))
-                .avgPrice(parseUnitPriceFromSub(sub))
+                .avgPrice(null) // AI 일정의 sub 단가는 추정값이다 — DB 가격으로 저장하면 다음 일정에서 「DB 가격」 으로 다시 쓰인다
                 .build());
     }
 
@@ -147,14 +146,4 @@ public class PlaceService {
         }
     }
 
-    private Integer parseUnitPriceFromSub(String sub) {
-        if (sub == null) return null;
-        Matcher m = UNIT_PRICE_PATTERN.matcher(sub);
-        if (!m.find()) return null;
-        try {
-            return Integer.parseInt(m.group(1).replace(",", ""));
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
 }

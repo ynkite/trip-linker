@@ -216,10 +216,10 @@ public class AiRouteService {
                  (시스템이 TripLinker 커뮤니티/카카오맵 실제 평점이 있으면 그 값으로 덮어씁니다.)
                  따라서 stars 필드는 항상 "평점 정보 없음"으로 출력하세요.
                - 상세 정보(sub): "숙소 · ₩180,000", "맛집 · 저녁 · ₩8,000×2", "관광지 · 1h · ₩2,000×2" 규격을 엄격히 지키세요.
-               - 예산 동기화: 각 장소의 'sub' 금액과 'transit' 금액의 총합은 해당 일차의 'budget'과 정확히 일치해야 합니다. 전체 누적 금액 또한 주어진 총 예산에 최대한 맞춰야 합니다.
-               - ★★★예산 최우선 준수 규칙★★★: 사용자가 입력한 총 예산(%d원)은 반드시 지켜야 하는 상한선입니다.
-                 전체 일정의 누적 합계(모든 Day의 budget 총합)가 이 총 예산의 90~100%% 범위 안에 들어오도록
-                 장소 단가·숙소 등급·식당 가격대를 조절해서 맞추세요. 예산을 초과하면 안 됩니다.
+               - 예산 동기화: 각 장소의 'sub' 금액과 'transit' 금액의 총합은 해당 일차의 'budget'과 정확히 일치해야 합니다. 전체 누적 금액은 주어진 총 예산을 넘지 않아야 합니다(예산을 다 채우려고 가격을 올리지 마세요).
+               - ★★★예산 최우선 준수 규칙★★★: 사용자가 입력한 총 예산(%d원)은 넘기지 않는 상한선입니다.
+                 예산에 맞출 때는 더 저렴한 실존 장소 · 숙소 · 식당을 고르세요. 합계를 맞추려고 장소의 가격 숫자를
+                 실제 시세보다 낮추거나 높여 적으면 안 됩니다(가격은 시세대로, 고르는 장소로 예산을 맞춘다).
                - ★예산 현실성 판단★: 사용자 예산이 인원수·여행 일수 대비 명백히 불가능한 수준
                  (예: 2인 1박2일에 1만원처럼 1인 1일 최소 식비·교통비조차 안 되는 금액)이 아닌 한,
                  사용자가 제시한 예산은 '합리적인 금액'으로 간주하고 그 예산에 맞춰 일정을 완성하세요.
@@ -563,8 +563,11 @@ public class AiRouteService {
                 JsonNode places = dayNode.path("places");
                 if (!places.isArray()) continue;
 
-                for (JsonNode place : places) {
+                for (int idx = 0; idx < places.size(); idx++) {
+                    JsonNode place = places.get(idx);
                     if (!place.has("type")) continue; // transit 항목 스킵
+                    // 둘째 날부터 맨 앞의 전날 숙소(체크아웃) 줄은 새 1박이 아니다 — 세면 N박이 2N박이 된다
+                    if (idusw.sbb.triplinker.domain.budget.RouteFacts.isCheckout(day, places, idx)) continue;
 
                     String category = mapTypeToCategory(place.path("type").asText(""));
                     if (category == null) continue;
@@ -1573,10 +1576,12 @@ public class AiRouteService {
 
                 // ★budget 재계산: 카카오가 채운 transit 금액 + 장소 sub 금액 합으로 그날 총액 갱신
                 long dayTotal = 0;
-                for (JsonNode pl : places) {
+                int dayNo = dayNode.path("day").asInt(1);
+                for (int k = 0; k < places.size(); k++) {
+                    JsonNode pl = places.get(k);
                     if (pl.has("transit")) {
                         dayTotal += parseAmountFromSub(pl.path("transit").asText(""));
-                    } else {
+                    } else if (!idusw.sbb.triplinker.domain.budget.RouteFacts.isCheckout(dayNo, places, k)) { // 체크아웃 줄은 1박으로 세지 않는다
                         dayTotal += parseAmountFromSub(pl.path("sub").asText(""));
                     }
                 }
@@ -2019,8 +2024,13 @@ public class AiRouteService {
 
     /**
      * 장소 가격(1인 단가)을 DB(PLACES.avg_price)에서 조회한다. 없으면 -1(→ AI 추정 대상).
+     * ★지금은 늘 -1: avg_price 에는 예전에 AI 추정 단가가 그대로 저장돼 있어(PlaceService) 손으로 넣은 값과 구분할 수 없다.
+     *   출처를 모르는 값을 「DB 가격」 으로 다시 쓰지 않는다. 출처 칸이 생기면 USE_DB_PRICE 를 켠다.
      */
+    private static final boolean USE_DB_PRICE = false;
+
     private int resolveDbPrice(String name) {
+        if (!USE_DB_PRICE) return -1;
         try {
             var found = placeRepository.findByName(name);
             if (found.isPresent() && found.get().getAvgPrice() != null && found.get().getAvgPrice() > 0) {
@@ -2032,6 +2042,15 @@ public class AiRouteService {
 
     /** type·끼니·단가·인원으로 sub 문자열 생성. */
     private String buildSub(String type, String meal, int unit, int cnt) {
+        if (unit < 0) {   // AI 추정도 실패 — 0원(무료)으로 적지 않는다. ₩ 가 없으니 합계 · 가계부 예상에서 빠진다
+            switch (type) {
+                case "food": return String.format("맛집 · %s · 가격 정보 없음", meal == null ? "점심" : meal);
+                case "cafe": return "카페 · 가격 정보 없음";
+                case "tour": return "관광지 · 1h · 가격 정보 없음";
+                case "stay": return "숙소 · 가격 정보 없음";
+                default:     return "· 가격 정보 없음";
+            }
+        }
         switch (type) {
             case "food": return String.format("맛집 · %s · ₩%,d×%d", meal == null ? "점심" : meal, unit, cnt);
             case "cafe": return String.format("카페 · ₩%,d×%d", unit, cnt);
@@ -2179,7 +2198,6 @@ public class AiRouteService {
             String type = entry.getKey();
             for (var n : entry.getValue()) {
                 int unit = n.has("_unit") ? n.path("_unit").asInt(-1) : -1;
-                if (unit < 0) unit = 0; // AI 추정도 실패하면 0
                 String meal = n.has("_meal") ? n.path("_meal").asText("점심") : "점심";
                 n.put("sub", buildSub(type, meal, unit, cnt));
                 n.remove("_unit");

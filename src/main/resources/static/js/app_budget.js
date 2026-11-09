@@ -202,6 +202,50 @@ function _fmtWon(n) {
     return '₩' + Number(n).toLocaleString();
 }
 
+function _escBasis(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/** GET /api/trips/{tripId}/budget-estimate → 「예산 근거」 카드. 실패하면 카드를 숨길 뿐 가계부는 그대로. */
+async function _loadBudgetBasis(tripId) {
+    const el = document.getElementById('ledger-basis');
+    if (!el) return;
+    try {
+        const res = await api.get('/api/trips/' + tripId + '/budget-estimate');
+        if (!res || !res.success || !res.data || tripId !== _budgetSelectedTripId) { el.style.display = 'none'; return; }
+        _renderBudgetBasis(res.data);
+    } catch (e) {
+        el.style.display = 'none';
+    }
+}
+
+/** 공공 자료 예산: 범위 · 항목별 계산식 · 가격 상태 · 출처 · 기준일 · 빠진 비용 */
+function _renderBudgetBasis(d) {
+    const el = document.getElementById('ledger-basis');
+    if (!el || !d) return;
+    const tagClass = s => s === 'PUBLIC_RATE' || s === 'STAT_ESTIMATE' ? 'bb-tag live' : s === 'NOT_ESTIMATED' ? 'bb-tag none' : 'bb-tag';
+    const range = (a, b) => a === b ? _fmtWon(a) : _fmtWon(a) + ' ~ ' + _fmtWon(b);
+    const rows = (d.items || []).map(i => {
+        const missing = i.source === 'NOT_ESTIMATED';
+        const src = [i.sourceName, i.asOf].filter(x => x && x !== '-').join(' · ');
+        return '<div class="bb-row">'
+            + '<div class="bb-label">' + _escBasis(i.label)
+            + '<span class="' + tagClass(i.source) + '">' + _escBasis(i.sourceLabel) + '</span></div>'
+            + '<div class="bb-amt">' + (missing ? '미산정' : range(i.min, i.max)) + '</div>'
+            + '<div class="bb-basis">' + _escBasis(i.basis) + (src ? '<br>출처: ' + _escBasis(src) : '') + '</div>'
+            + '</div>';
+    }).join('');
+    el.innerHTML =
+        '<div class="bb-head"><div class="bb-title">예산 근거 · 공공 자료</div>'
+        + '<div class="bb-conf">신뢰도 ' + _escBasis(d.confidence) + ' · 관광공사 자료 ' + (d.publicShare || 0) + '%</div></div>'
+        + '<div class="bb-range">' + range(d.min, d.max) + '</div>'
+        + '<div class="bb-check">' + _escBasis(d.budgetCheck) + '</div>'
+        + rows
+        + '<div class="bb-foot">계산에 넣지 않은 비용: ' + _escBasis((d.excluded || []).join(', '))
+        + '<br>' + (d.notes || []).map(_escBasis).join('<br>') + '</div>';
+    el.style.display = 'block';
+}
+
 /** GET /api/trips/{tripId}/expenses → 가계부 상세 화면 렌더링 */
 async function _loadExpenses(tripId) {
     const res = await api.get('/api/trips/' + tripId + '/expenses');
@@ -263,6 +307,8 @@ async function _loadExpenses(tripId) {
             budgetRefEl.style.display = 'none';
         }
     }
+
+    _loadBudgetBasis(tripId);  // 기다리지 않는다 — 관광공사가 느려도 가계부는 먼저 뜬다
 
     // ── 예상 파이 차트 ──
     const estPieEl = document.getElementById('pie-estimated');
@@ -422,9 +468,11 @@ function _renderItinerary(routeData, actualExps, startDate) {
 
         // 장소별 예상 금액 파싱 및 합산
         const places = (day.places || []).filter(p => !p.transit);
+        // 둘째 날부터 맨 앞의 전날 숙소는 체크아웃 줄 — 새 1박이 아니라 금액을 세지 않는다(서버 RouteFacts.isCheckout 과 같은 규칙)
+        const isCheckout = (k, p) => (day.day || idx + 1) > 1 && k === 0 && p.type === 'stay';
         let estTotal = 0;
-        places.forEach(p => {
-            if (p.sub) {
+        places.forEach((p, k) => {
+            if (p.sub && !isCheckout(k, p)) {
                 const m = p.sub.match(/₩\s*([\d,]+)(?:\s*[xX×*]\s*(\d+))?/);
                 if (m) estTotal += (parseInt(m[1].replace(/,/g, '')) || 0) * parseInt(m[2] || '1');
             }
@@ -439,9 +487,9 @@ function _renderItinerary(routeData, actualExps, startDate) {
         const hasAct   = actTotal > 0;
         const diff     = actTotal - estTotal;
 
-        const placeRows = places.map(p => {
+        const placeRows = places.map((p, k) => {
             let estAmt = 0;
-            if (p.sub) {
+            if (p.sub && !isCheckout(k, p)) {
                 const m = p.sub.match(/₩\s*([\d,]+)(?:\s*[xX×*]\s*(\d+))?/);
                 if (m) estAmt = (parseInt(m[1].replace(/,/g, '')) || 0) * parseInt(m[2] || '1');
             }
