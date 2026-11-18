@@ -484,7 +484,7 @@
             <div class="pr-info" style="cursor:pointer" onclick="showMapPlacePopup('${_mjs(p.name || p.key)}','${_mjs(p.type)}')">
               <div class="pr-name" style="font-weight:700; color:#333;">${_mx(p.name)}</div>
               <div class="pr-sub" style="font-size:12px; color:var(--text3); margin-top:2px;">${_mx(p.sub || '')}</div>
-              <div class="pr-stars" style="color:#F5A623; font-size:11px; margin-top:4px; font-weight:600;">${_mx(p.stars || '')}</div>
+              ${(p.stars && !/정보\s*없음/.test(p.stars)) ? `<div class="pr-stars" style="color:#B26B00; font-size:11px; margin-top:4px; font-weight:600;">${_mx(p.stars)}</div>` : ''}
             </div>
             <div style="font-size:10px;font-weight:600;color:var(--text2);margin-right:5px;white-space:nowrap">${_mx(p.time || '')}</div>
             <button class="btn-replace" onclick="showReplaceInput(this,'${_mjs(p.key)}')">교체</button>

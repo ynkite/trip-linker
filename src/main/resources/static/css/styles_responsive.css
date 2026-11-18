@@ -143,14 +143,16 @@ table {
     #navAdminLink {
         order: 0;                 /* 로그아웃(order:1) 바로 왼쪽 */
         font-size: 12px;
-        padding: 6px 10px;
+        padding: 0 10px;
+        height: 30px;
     }
 
     /* 로그아웃 버튼: 알림 왼쪽, 작게 */
     #navLogoutBtn {
         order: 1;
         font-size: 12px;
-        padding: 6px 10px;
+        padding: 0 10px;
+        height: 30px;
     }
     #navBellWrapper { order: 2; margin-right: 0; }
 
@@ -548,4 +550,49 @@ table {
     body:has(#navPlannerSteps[style*="flex"]) .nps-num { width: 14px; height: 14px; font-size: 8px; }
     body:has(#navPlannerSteps[style*="flex"]) .nps-lbl { white-space: nowrap; font-size: 11px; }
     body:has(#navPlannerSteps[style*="flex"]) .nps-arrow { margin: 0 1px; font-size: 11px; }
+}
+/* =============================================================================
+ * 7. 폰(≤480px)에서 한 화면에 들어오게 (2026-11-19)
+ *    375 · 390 폭 캡처에서 걸린 것만: 플래너 머리줄 두 줄, 플래너 좌우 여백, 가계부 요약 세로 3장, 로그인 카드 위 빈 공간
+ * ========================================================================== */
+@media (max-width: 480px) {
+    /* 플래너 · 지도: 단계 바 + 로그아웃 + 알림이 한 줄에 — 지금 단계만 글자, 나머지는 번호만 */
+    body:has(#navPlannerSteps[style*="flex"]) nav { flex-wrap: nowrap; }
+    body:has(#navPlannerSteps[style*="flex"]) .nps-btn:not(.active) .nps-lbl { display: none; }
+    body:has(#navPlannerSteps[style*="flex"]) .nps-btn { padding: 3px 5px; }
+    body:has(#navPlannerSteps[style*="flex"]) .nav-links { padding: 0 2px; }
+
+    /* 플래너 입력 화면: 좌우 여백을 줄여 입력 칸을 넓게 */
+    .planner-wrap { padding: 0 12px 40px; }
+    .planner-hd { padding: 16px 0 12px; }
+
+    /* 가계부 요약: 세로 3장 → 가로 한 줄 3칸 (금액만 크게) */
+    #ledger-main .ledger-body > div[style*="grid-template-columns:1fr 1fr 1fr"]:first-of-type {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        margin-bottom: 16px !important;
+    }
+    #ledger-main .ledger-summary-card { padding: 12px 10px; min-width: 0; }
+    #ledger-total, #ledger-actual, #ledger-status {
+        font-size: clamp(13px, 4.1vw, 16px) !important;
+        white-space: nowrap;
+        letter-spacing: -.3px;
+    }
+
+    /* 로그인 · 회원가입: 카드를 위로 붙이고 안쪽 여백을 줄임 */
+    .auth-wrap { min-height: 0; align-items: flex-start; padding: 16px 12px 28px; }
+    .auth-card { padding: 26px 20px; max-width: 100%; }
+
+    /* 메인 히어로: 좌우 여백을 줄여 글이 한 줄에 더 들어가게 */
+    .hsc { padding: 22px 18px; }
+    .hsc-ttl { font-size: 30px; }
+    .hsc-dest-row { gap: 5px; }
+    .hsc-dest { padding: 4px 9px; }
+    .hsc-feats li { grid-template-columns: 58px 1fr; font-size: 12.5px; }
+
+    /* 큐레이션: 좌우 80px 여백 때문에 제목이 「트/레킹」 처럼 끊기던 것 — 화살표 자리만 남김 */
+    body .curation-panel .slide.on > div:nth-child(2) {
+        padding-left: 34px !important;
+        padding-right: 34px !important;
+    }
 }

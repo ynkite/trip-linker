@@ -15,6 +15,7 @@
   <link rel="stylesheet" th:href="@{/css/styles_responsive_map.css}">
   <link rel="stylesheet" th:href="@{/css/styles_responsive_budget.css}">
   <link rel="stylesheet" th:href="@{/css/styles_footer.css}">
+  <link rel="stylesheet" th:href="@{/css/styles_auth_modal.css}">
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=50a304fa42a0bd2d294ac871e3acae14&autoload=false&libraries=services"></script>
   <!-- 가계부 PDF. CDN 파일이 바뀌면 브라우저가 실행하지 않도록 무결성 값(SRI)을 붙임. jsPDF 2.5.1 은 알려진 취약점 12건이라 4.2.1 로 올림 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha512-plOdviVmws4Y3JAvbnpfKb2hVxKM1lCwsi3vmElYRj+tiDLffZ4FVUj5a8vyKJ9pIgl8JCAHEJ4D1iUKBecswg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -69,7 +70,7 @@
         font-size:10px;font-weight:700;text-align:center;line-height:18px;
         padding:0 3px;pointer-events:none;box-sizing:border-box;border:2px solid #fff;"></span>
     </div>
-    <a class="btn-o" id="navAdminLink" onclick="go('admin')" style="display:none;cursor:pointer;color:var(--sage);font-weight:700">관리자</a>
+    <a class="btn-o" id="navAdminLink" onclick="go('admin')" style="display:none;cursor:pointer;color:var(--sage-d)">관리자</a>
     <button class="btn-o" id="navUserNameBtn" onclick="goRefresh('mypage')" style="display:none">마이페이지</button>
     <button class="btn-o" id="navLogoutBtn" onclick="doLogout()" style="display:none">로그아웃</button>
   </div>

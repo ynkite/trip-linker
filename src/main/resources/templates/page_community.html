@@ -480,11 +480,13 @@
       window.go = function(id, addToHistory) {
         _origGo(id, addToHistory);
         // 후기 상세 페이지
-        if (MOCK_ROUTE_REVIEWS[id] || MOCK_STAY_REVIEWS[id] || MOCK_FOOD_REVIEWS[id]) {
+        // (예시 데이터 MOCK_* 가 지워진 뒤에도 이 감시가 남아 화면을 옮길 때마다 ReferenceError 가 나던 것을 막음)
+        const _has = (name) => typeof window[name] !== 'undefined' && window[name] && window[name][id];
+        if (_has('MOCK_ROUTE_REVIEWS') || _has('MOCK_STAY_REVIEWS') || _has('MOCK_FOOD_REVIEWS')) {
           setTimeout(() => renderReviewDetailPage(id), 10);
         }
         // 장소 상세 페이지
-        if (MOCK_TOUR_PLACES[id] || MOCK_CAFE_PLACES[id]) {
+        if (_has('MOCK_TOUR_PLACES') || _has('MOCK_CAFE_PLACES')) {
           setTimeout(() => renderPlaceDetailPage(id), 10);
         }
       };
