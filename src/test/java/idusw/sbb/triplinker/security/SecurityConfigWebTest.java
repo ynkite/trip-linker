@@ -69,6 +69,10 @@ class SecurityConfigWebTest {
     @MockitoBean CustomOAuth2UserService customOAuth2UserService;
     @MockitoBean OAuth2SuccessHandler oAuth2SuccessHandler;
     @MockitoBean OAuth2FailureHandler oAuth2FailureHandler;
+    // 테스트 로그인(develop)이 넣은 DemoGuardFilter 의 의존성. 진짜 필터는 그대로 돌고, 일반 회원 요청은 통과시킨다.
+    @MockitoBean idusw.sbb.triplinker.domain.demo.service.DemoAccountService demoAccountService;
+    @MockitoBean idusw.sbb.triplinker.domain.demo.service.DemoUsageLimiter demoUsageLimiter;
+    @MockitoBean idusw.sbb.triplinker.domain.demo.DemoLoginProperties demoLoginProperties;
 
     private int status(MvcResult r) { return r.getResponse().getStatus(); }
 
