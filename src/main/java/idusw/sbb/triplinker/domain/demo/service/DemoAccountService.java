@@ -86,6 +86,11 @@ public class DemoAccountService {
         return user;
     }
 
+    /** 아무도 모르는 값의 해시. 비밀번호로는 들어올 수 없는 계정을 만들 때 쓴다(후기 전용 테스트 계정). */
+    static String unusablePasswordHash() {
+        return new BCryptPasswordEncoder().encode(randomSecret());
+    }
+
     /** 화면·응답·로그 어디에도 남기지 않는 일회용 값. */
     private static String randomSecret() {
         byte[] bytes = new byte[32];
