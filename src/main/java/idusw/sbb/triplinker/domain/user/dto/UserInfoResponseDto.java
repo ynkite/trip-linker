@@ -39,6 +39,8 @@ public class UserInfoResponseDto {
         this.region   = deleted ? null : user.getRegion();
         this.status   = user.getStatus();
         this.isSocial = isSocial;
-        this.role   = user.getRole();
+        // 테스트 관리자(DEMO_ADMIN)도 화면에서는 관리자 메뉴가 보여야 하므로 ADMIN 으로 내려준다.
+        // 실제 권한은 토큰의 DEMO_ADMIN 이 정하고, 바꾸는 요청은 서버(DemoGuardFilter)가 막는다.
+        this.role   = "DEMO_ADMIN".equals(user.getRole()) ? "ADMIN" : user.getRole();
     }
 }

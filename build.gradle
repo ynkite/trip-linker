@@ -51,6 +51,8 @@ dependencies {
     //스프링 시큐리티
     implementation 'org.springframework.boot:spring-boot-starter-security'
     testImplementation 'org.springframework.security:spring-security-test'
+    // 테스트 로그인 되돌리기 시험용 메모리 DB (테스트에서만 사용)
+    testRuntimeOnly 'com.h2database:h2'
 
     //소셜 로그인
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'

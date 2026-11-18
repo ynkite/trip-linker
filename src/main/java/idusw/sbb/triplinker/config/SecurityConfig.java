@@ -4,6 +4,7 @@ import idusw.sbb.triplinker.domain.auth.filter.JwtAuthenticationFilter;
 import idusw.sbb.triplinker.domain.auth.security.OAuth2FailureHandler;
 import idusw.sbb.triplinker.domain.auth.security.OAuth2SuccessHandler;
 import idusw.sbb.triplinker.domain.auth.service.CustomOAuth2UserService;
+import idusw.sbb.triplinker.domain.demo.filter.DemoGuardFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,6 +36,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final DemoGuardFilter demoGuardFilter;
 
     // 카메라 · 마이크 · 위치 · 결제를 쓰지 않으므로 모두 끈다 (화면 코드에 geolocation 호출 0건)
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
@@ -97,6 +99,7 @@ public class SecurityConfig {
                                 "/api/auth/password/reset-request", //비밀번호 재설정 요청
                                 "/api/auth/password/reset",         //비밀번호 재설정 처리
                                 "/api/auth/refresh",                //토큰 재발급 (접속 토큰이 만료된 뒤에 부르므로 재발급 토큰 자체로 확인)
+                                "/api/auth/demo",                   //테스트 로그인 단추 (APP_DEMO_LOGIN_ENABLED)
                                 "/api/maps/weather",
                                 "/oauth2/authorization/**",         //소셜 로그인 요청
                                 "/login/oauth2/code/**"             //소셜 로그인 콜백
@@ -120,7 +123,8 @@ public class SecurityConfig {
 
 
                         // 관리자 전용 기능
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // 테스트 관리자(DEMO_ADMIN)는 읽기만 가능. 바꾸는 요청은 DemoGuardFilter 가 403 으로 막는다.
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "DEMO_ADMIN")
 
                         // (Swagger 허용 줄은 뺐다 — springdoc 의존성이 없어 열려 있던 주소가 아무 데도 쓰이지 않았다)
 
@@ -145,7 +149,9 @@ public class SecurityConfig {
                 )
 
                 // Spring Security의 기본 인증 필터가 동작하기 전에, 커스텀 JWT 필터가 먼저 토큰을 검증하도록 설정
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // 테스트 계정 제한(읽기 전용 관리자, AI 하루 횟수). JWT 필터가 인증을 채운 뒤에 돈다.
+                .addFilterAfter(demoGuardFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
