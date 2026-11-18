@@ -19,6 +19,7 @@ import idusw.sbb.triplinker.domain.user.dto.UserNicknameUpdateRequest;
 import idusw.sbb.triplinker.domain.user.entity.User;
 import idusw.sbb.triplinker.domain.user.repository.ScrapRepository;
 import idusw.sbb.triplinker.domain.user.repository.UserRepository;
+import idusw.sbb.triplinker.global.common.PasswordPolicy;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ import org.springframework.web.client.RestClient;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +43,9 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
+    // 소셜 계정 탈퇴 확인 문구 (마이페이지 화면의 입력 칸과 같은 글)
+    static final String WITHDRAW_CONFIRM_TEXT = "탈퇴하겠습니다";
 
     @Value("${kakao.admin-key:}")
     private String kakaoAdminKey;
@@ -73,13 +78,23 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void withdraw(Long userId) {
+    public void withdraw(Long userId, String password, String confirmText) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 유저를 찾을 수 없습니다. ID: " + userId));
 
+        // 본인 확인을 서버에서 한다. 화면이 먼저 비밀번호를 확인하지만, 탈퇴 요청 자체는 토큰만으로 통과했다.
+        // 일반 계정은 비밀번호, 소셜 계정(비밀번호 없음)은 화면과 같은 확인 문구.
+        Optional<OAuthAccount> social = oAuthAccountRepository.findByUserId(userId);
+        boolean confirmed = social.isPresent()
+                ? WITHDRAW_CONFIRM_TEXT.equals(confirmText == null ? null : confirmText.trim())
+                : password != null && user.getPasswordHash() != null && passwordEncoder.matches(password, user.getPasswordHash());
+        if (!confirmed) {
+            throw new IllegalArgumentException(social.isPresent()
+                    ? "확인 문구를 정확히 입력해 주세요." : "비밀번호가 올바르지 않습니다.");
+        }
+
         // 소셜 계정이면 연결 해제 먼저 (DB 삭제 전에 providerId/accessToken 필요)
-        oAuthAccountRepository.findByUserId(userId)
-                .ifPresent(this::revokeSocialAccount);
+        social.ifPresent(this::revokeSocialAccount);
 
         user.withdrawMasked(userId);
         refreshTokenRepository.deleteByUserId(userId);
@@ -137,6 +152,10 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 유저를 찾을 수 없습니다."));
         if (!passwordEncoder.matches(currentRaw, user.getPasswordHash())) {
             throw new IllegalArgumentException("현재 비밀번호가 올바르지 않습니다.");
+        }
+        // 가입 · 재설정과 같은 규칙. 화면은 8자 이상만 보고 있어서 서버에서 다시 확인한다.
+        if (!PasswordPolicy.isValid(newRaw)) {
+            throw new IllegalArgumentException(PasswordPolicy.MESSAGE);
         }
         user.updatePassword(passwordEncoder.encode(newRaw));
     }

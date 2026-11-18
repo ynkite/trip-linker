@@ -103,7 +103,7 @@ const api = {
     post:  (path, body)   => apiCall(path, { method: 'POST',  body: JSON.stringify(body) }),
     put:   (path, body)   => apiCall(path, { method: 'PUT',   body: JSON.stringify(body) }),
     patch: (path, body)   => apiCall(path, { method: 'PATCH', body: JSON.stringify(body) }),
-    del:   (path)         => apiCall(path, { method: 'DELETE' })
+    del:   (path, body)   => apiCall(path, body === undefined ? { method: 'DELETE' } : { method: 'DELETE', body: JSON.stringify(body) })
 };
 
 /* ───────────────────────────────────────────────
@@ -1413,7 +1413,7 @@ async function saveInfoEdit() {
         if (np2 && np.value !== np2.value) { toast('새 비밀번호가 일치하지 않습니다'); return; }
         const currentPw = document.getElementById('infoPwInput')?.value || '';
         const pwRes = await api.patch('/api/users/me/password', { currentPassword: currentPw, newPassword: np.value });
-        if (!pwRes.success) { toast('⚠️ 비밀번호 변경에 실패했습니다.'); return; }
+        if (!pwRes.success) { toast('⚠️ ' + (pwRes.message || '비밀번호 변경에 실패했습니다.')); return; }
     }
 
     if (_currentUser) {
@@ -1467,7 +1467,11 @@ async function doWithdraw() {
 
 async function confirmWithdraw() {
     closeWithdrawModal();
-    const res = await api.del('/api/users/me');
+    // 서버가 본인 확인을 다시 한다: 일반 계정은 비밀번호, 소셜 계정은 확인 문구를 같이 보낸다
+    const body = _currentUser?.isSocial
+        ? { confirmText: (document.getElementById('withdrawSocialInput')?.value || '').trim() }
+        : { password: document.getElementById('withdrawPwInput')?.value || '' };
+    const res = await api.del('/api/users/me', body);
     if (!res.success) {
         toast('⚠️ ' + (res.message || '탈퇴 처리 중 오류가 발생했습니다.'));
         return;

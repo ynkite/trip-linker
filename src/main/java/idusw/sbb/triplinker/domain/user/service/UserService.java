@@ -17,7 +17,8 @@ import java.time.LocalDate;
 public interface UserService {
     UserInfoResponseDto getProfile(Long userId);
     void updateNickname(Long userId, UserNicknameUpdateRequest request);
-    void withdraw(Long userId);
+    // 일반 계정은 password, 소셜 계정은 confirmText(「탈퇴하겠습니다」) 로 본인 확인
+    void withdraw(Long userId, String password, String confirmText);
 
     boolean verifyPassword(Long userId, String rawPassword);
     void updateProfile(Long userId, String name, String region, String gender, LocalDate birthDate, String mbti);

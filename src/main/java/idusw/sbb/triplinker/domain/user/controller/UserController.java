@@ -58,10 +58,13 @@ public class UserController {
     }
 
     // 회원 탈퇴 (DELETE /api/users/me) - 개인정보 마스킹 + 토큰 즉시 삭제
+    // 본문: 일반 계정 {"password": ...}, 소셜 계정 {"confirmText": "탈퇴하겠습니다"} — 서버가 본인 확인
     @DeleteMapping("/me")
     public ResponseEntity<ApiResponse<Void>> withdrawMe(
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.withdraw(userDetails.getUserId());
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody(required = false) Map<String, String> body) {
+        Map<String, String> b = body == null ? Map.of() : body;
+        userService.withdraw(userDetails.getUserId(), b.get("password"), b.get("confirmText"));
         return ResponseEntity.ok(ApiResponse.success("회원 탈퇴가 완료되었습니다.", null));
     }
 
