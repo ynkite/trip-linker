@@ -22,7 +22,7 @@ public class ExpenseController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long tripId) {
 
-        BudgetReportResponseDto report = expenseService.getBudgetReport(tripId);
+        BudgetReportResponseDto report = expenseService.getBudgetReport(userId(userDetails), tripId);
         return ResponseEntity.ok(ApiResponse.success(report));
     }
 
@@ -32,7 +32,7 @@ public class ExpenseController {
             @PathVariable Long tripId,
             @RequestBody ExpenseAddRequestDto dto) {
 
-        expenseService.addExpense(tripId, dto);
+        expenseService.addExpense(userId(userDetails), tripId, dto);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
@@ -43,7 +43,7 @@ public class ExpenseController {
             @PathVariable Long expenseId,
             @RequestBody ExpenseAddRequestDto dto) {
 
-        expenseService.updateExpense(expenseId, dto);
+        expenseService.updateExpense(userId(userDetails), tripId, expenseId, dto);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
@@ -54,7 +54,11 @@ public class ExpenseController {
             @PathVariable Long tripId,
             @PathVariable Long expenseId) {
 
-        expenseService.deleteExpense(expenseId);
+        expenseService.deleteExpense(userId(userDetails), tripId, expenseId);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    private static Long userId(CustomUserDetails userDetails) {
+        return userDetails != null ? userDetails.getUserId() : null;
     }
 }

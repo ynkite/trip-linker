@@ -7,6 +7,7 @@ import idusw.sbb.triplinker.domain.chat.repository.ChatSessionRepository;
 
 import idusw.sbb.triplinker.domain.plan.entity.PlanInputForm;
 import idusw.sbb.triplinker.domain.plan.repository.TravelPlanRepository;
+import idusw.sbb.triplinker.domain.plan.service.TripAccessGuard;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -46,6 +47,11 @@ public class ChatbotServiceImpl implements ChatbotService {
     private final ChatSessionRepository sessionRepository;
     private final ChatMessageRepository messageRepository;
     private final TravelPlanRepository planRepository;
+    // 챗봇 방에는 회원 칸이 없어서, 방이 가리키는 여행의 주인 · 편집자인지로 확인한다
+    private final TripAccessGuard tripAccessGuard;
+
+    // 한 번에 보내는 글 길이 상한 — 긴 글로 AI 요금을 키우는 것을 막는다(화면 입력창 기준으로 넉넉하게)
+    static final int MAX_MESSAGE_LENGTH = 2000;
 
     // ── AI 클라이언트 ─────────────────────────────────────────────
     private final ChatClient claudeClient;    // Claude (메인)  ★ NEW
@@ -56,6 +62,7 @@ public class ChatbotServiceImpl implements ChatbotService {
             ChatSessionRepository sessionRepository,
             ChatMessageRepository messageRepository,
             TravelPlanRepository planRepository,
+            TripAccessGuard tripAccessGuard,
 
             // ===== // 클로드 API 사용할 때 (Anthropic 정식 SDK) =====
             // build.gradle 의 spring-ai-starter-model-anthropic 가 자동 생성하는 빈.
@@ -79,6 +86,7 @@ public class ChatbotServiceImpl implements ChatbotService {
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.planRepository    = planRepository;
+        this.tripAccessGuard   = tripAccessGuard;
 
         // ===== // 클로드 API 사용할 때 =====
         this.claudeClient   = ChatClient.builder(claudeModel).build();
@@ -98,7 +106,8 @@ public class ChatbotServiceImpl implements ChatbotService {
     // API 명세: 세션 생성
     @Override
     @Transactional
-    public Long createSession(Long planId) {
+    public Long createSession(Long userId, Long planId) {
+        if (planId != null) tripAccessGuard.requireEditor(planId, userId);
         ChatSession session = new ChatSession();
         session.setTitle("새로운 여행 플랜 대화");
         session.setPlanId(planId);
@@ -109,10 +118,15 @@ public class ChatbotServiceImpl implements ChatbotService {
     // API 명세: 메시지 전송 및 기억력 유지
     @Override
     @Transactional
-    public String processMessage(Long sessionId, String message) {
+    public String processMessage(Long userId, Long sessionId, String message) {
 
-        ChatSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대화방입니다."));
+        ChatSession session = loadOwnSession(userId, sessionId);
+        if (message == null || message.isBlank()) {
+            throw new IllegalArgumentException("메시지를 입력해 주세요.");
+        }
+        if (message.length() > MAX_MESSAGE_LENGTH) {
+            throw new IllegalArgumentException("메시지는 " + MAX_MESSAGE_LENGTH + "자까지 보낼 수 있습니다.");
+        }
 
         // 유저의 새로운 메시지 DB 저장
         ChatMessage userChat = new ChatMessage();
@@ -315,9 +329,8 @@ public class ChatbotServiceImpl implements ChatbotService {
     }
     @Override
     @Transactional
-    public void saveSystemMessage(Long sessionId, String message) {
-        ChatSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대화방입니다."));
+    public void saveSystemMessage(Long userId, Long sessionId, String message) {
+        ChatSession session = loadOwnSession(userId, sessionId);
 
         ChatMessage systemChat = new ChatMessage();
         systemChat.setChatSession(session);
@@ -326,4 +339,14 @@ public class ChatbotServiceImpl implements ChatbotService {
         messageRepository.save(systemChat);
     }
 
+
+    private ChatSession loadOwnSession(Long userId, Long sessionId) {
+        if (sessionId == null) throw new IllegalArgumentException("존재하지 않는 대화방입니다.");
+        ChatSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대화방입니다."));
+        if (session.getPlanId() != null) {
+            tripAccessGuard.requireEditor(session.getPlanId(), userId);
+        }
+        return session;
+    }
 }

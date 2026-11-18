@@ -1,9 +1,11 @@
 package idusw.sbb.triplinker.domain.chat.controller;
 
+import idusw.sbb.triplinker.domain.auth.security.CustomUserDetails;
 import idusw.sbb.triplinker.domain.chat.dto.ChatMessageDto;
 import idusw.sbb.triplinker.domain.chat.service.ChatbotService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -17,9 +19,9 @@ public class ChatbotController {
 
     // API 챗봇 세션 생성 (POST /api/chat/sessions)
     @PostMapping("/sessions")
-    public ResponseEntity<?> createSession(@RequestBody Map<String, Long> request) {
+    public ResponseEntity<?> createSession(@AuthenticationPrincipal CustomUserDetails user, @RequestBody Map<String, Long> request) {
         Long planId = request.get("planId");
-        Long sessionId = chatbotService.createSession(planId);
+        Long sessionId = chatbotService.createSession(uid(user), planId);
 
         // 명세서 모양: {"success":true, "data":{"sessionId":1}}
         return ResponseEntity.ok(Map.of(
@@ -30,11 +32,12 @@ public class ChatbotController {
 
     // API AI 채팅 메시지 전송 (POST /api/chat/message)
     @PostMapping("/message")
-    public ResponseEntity<?> sendMessage(@RequestBody ChatMessageDto request) {
+    public ResponseEntity<?> sendMessage(@AuthenticationPrincipal CustomUserDetails user, @RequestBody ChatMessageDto request) {
 
         // isSystem=true 이면 AI 호출 없이 SYSTEM 메시지만 DB 저장
         if (Boolean.TRUE.equals(request.getIsSystem())) {
             chatbotService.saveSystemMessage(
+                    uid(user),
                     request.getSessionId(),
                     request.getMessage()
             );
@@ -42,6 +45,7 @@ public class ChatbotController {
         }
 
         String responseMessage = chatbotService.processMessage(
+                uid(user),
                 request.getSessionId(),
                 request.getMessage()
         );
@@ -50,5 +54,9 @@ public class ChatbotController {
                 "success", true,
                 "data", Map.of("response", responseMessage)
         ));
+    }
+
+    private static Long uid(CustomUserDetails user) {
+        return user != null ? user.getUserId() : null;
     }
 }

@@ -1,10 +1,13 @@
 package idusw.sbb.triplinker.domain.route.controller;
 
+import idusw.sbb.triplinker.domain.auth.security.CustomUserDetails;
+import idusw.sbb.triplinker.domain.plan.service.TripAccessGuard;
 import idusw.sbb.triplinker.domain.route.service.AiRouteService;
 import idusw.sbb.triplinker.domain.route.service.DemoRouteService;
 import idusw.sbb.triplinker.global.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -14,9 +17,17 @@ public class AiRouteController {
 
     private final AiRouteService aiRouteService;
     private final DemoRouteService demoRouteService;
+    // 일정을 바꾸거나 AI 를 부르는 주소는 그 여행의 주인 · 편집자만 (조회 GET 은 공유 링크라 그대로 공개)
+    private final TripAccessGuard tripAccessGuard;
+
+    private void requireEditor(Long tripId, CustomUserDetails user) {
+        tripAccessGuard.requireEditor(tripId, user != null ? user.getUserId() : null);
+    }
 
     @PostMapping("/generate")
-    public ResponseEntity<ApiResponse<Object>> generateRoute(@PathVariable Long tripId) {
+    public ResponseEntity<ApiResponse<Object>> generateRoute(@AuthenticationPrincipal CustomUserDetails user,
+                                                             @PathVariable Long tripId) {
+        requireEditor(tripId, user);
         // ★고정 경로 모드: AI를 한 번도 호출하지 않고 저장해 둔 경로를 그대로 돌려준다.
         //   토큰 비용이 0이 되며, 끄려면 APP_DEMO_ROUTE_ENABLED=false 로 재시작한다.
         if (demoRouteService.isEnabled()) {
@@ -61,8 +72,10 @@ public class AiRouteController {
 
     @PostMapping("/replace")
     public ResponseEntity<?> replaceRoutePlaces(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable Long tripId,
             @RequestBody java.util.Map<String, java.util.List<java.util.Map<String, String>>> payload) {
+        requireEditor(tripId, user);
 
         // ★고정 경로 모드에서는 교체가 AI 호출이므로 막는다.
         if (demoRouteService.isEnabled()) {
@@ -84,8 +97,10 @@ public class AiRouteController {
     // 날씨악화 실내 일정 교체 API
     @PostMapping("/indoor-replace")
     public ResponseEntity<?> replaceDayIndoor(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable Long tripId,
             @RequestParam int day) {
+        requireEditor(tripId, user);
 
         // ★고정 경로 모드에서는 실내 일정 교체도 AI 호출이므로 막는다.
         if (demoRouteService.isEnabled()) {
@@ -107,8 +122,10 @@ public class AiRouteController {
 
     @PostMapping("/reorder")
     public ResponseEntity<?> updateRouteManually(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable Long tripId,
             @RequestBody com.fasterxml.jackson.databind.JsonNode routeData) {
+        requireEditor(tripId, user);
         try {
             String json = routeData.toString();
             // 저장(내부에서 카카오 거리/시간/비용 재계산 + budget 갱신 수행)
@@ -117,8 +134,9 @@ public class AiRouteController {
             Object updated = aiRouteService.getRoutesByTripId(tripId);
             return ResponseEntity.ok(java.util.Map.of("success", true, "data", updated));
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body(java.util.Map.of("success", false, "message", e.getMessage()));
+            // 내부 예외 문구는 서버 로그에만 남기고 응답에는 일반 안내만 준다
+            org.slf4j.LoggerFactory.getLogger(AiRouteController.class).warn("일정 저장 실패 tripId={}", tripId, e);
+            return ResponseEntity.badRequest().body(java.util.Map.of("success", false, "message", "일정을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요."));
         }
     }
 

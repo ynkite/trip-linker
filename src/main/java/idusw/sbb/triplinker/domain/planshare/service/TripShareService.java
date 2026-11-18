@@ -2,6 +2,7 @@ package idusw.sbb.triplinker.domain.planshare.service;
 
 import idusw.sbb.triplinker.domain.plan.entity.TravelPlan;
 import idusw.sbb.triplinker.domain.plan.repository.TravelPlanRepository;
+import idusw.sbb.triplinker.domain.plan.service.TripAccessGuard;
 import idusw.sbb.triplinker.domain.planshare.dto.ShareInviteRequestDto;
 import idusw.sbb.triplinker.domain.planshare.dto.TripMemberResponseDto;
 import idusw.sbb.triplinker.domain.planshare.entity.PlanRole;
@@ -31,11 +32,13 @@ public class TripShareService {
     // 구글 메일 발송 도구 주입
     private final JavaMailSender mailSender;
 
+    // 멤버 목록(이메일)은 멤버만, 초대는 주인 · 편집자만 (전에는 로그인한 누구나 자기를 남의 여행 편집자로 넣을 수 있었다)
+    private final TripAccessGuard tripAccessGuard;
+
     // 멤버 목록 조회
-    public List<TripMemberResponseDto> getMembers(Long tripId) {
+    public List<TripMemberResponseDto> getMembers(Long userId, Long tripId) {
         // 플랜 정보 가져오기 (소유자 확인용)
-        TravelPlan plan = travelPlanRepository.findById(tripId)
-                .orElseThrow(() -> new IllegalArgumentException("플랜을 찾을 수 없습니다."));
+        TravelPlan plan = tripAccessGuard.requireMember(tripId, userId);
 
         // 공유 테이블에 저장된 초대 멤버들 불러오기
         List<TripMemberResponseDto> members = tripMemberRepository.findByTravelPlanId(tripId).stream()
@@ -57,9 +60,8 @@ public class TripShareService {
 
     // 멤버 초대 및 실제 이메일 발송
     @Transactional
-    public void inviteMember(Long tripId, ShareInviteRequestDto dto) {
-        TravelPlan plan = travelPlanRepository.findById(tripId)
-                .orElseThrow(() -> new IllegalArgumentException("플랜을 찾을 수 없습니다."));
+    public void inviteMember(Long userId, Long tripId, ShareInviteRequestDto dto) {
+        TravelPlan plan = tripAccessGuard.requireEditor(tripId, userId);
 
         // 이메일로 가입된 유저인지 확인
         User invitee = userRepository.findByEmail(dto.getEmail())
@@ -110,7 +112,8 @@ public class TripShareService {
 
     // 읽기 전용 공유 링크 생성
     @Transactional
-    public Map<String, String> generateShareLink(Long tripId) {
+    public Map<String, String> generateShareLink(Long userId, Long tripId) {
+        tripAccessGuard.requireMember(tripId, userId);
         String hexToken;
         try {
             long obscure = tripId ^ 0x5A3C9B7D2EL; // 비트 마스킹으로 숫자 완전 변형

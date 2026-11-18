@@ -33,6 +33,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage(), data));
     }
 
+    // 남의 여행 · 지출 · 회원 정보에 손댈 때 (로그인은 했지만 주인 · 멤버가 아님)
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleForbidden(ForbiddenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage()));
+    }
+
     // 사유 누락, 존재하지 않는 ID 조회, 잘못된 상태 변경 시도 등
     // 프로젝트 전반에서 공통으로 던지는 일반 검증 예외를 한 곳에서 처리
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})

@@ -7,6 +7,8 @@ import idusw.sbb.triplinker.domain.expense.entity.Expense;
 import idusw.sbb.triplinker.domain.expense.repository.ExpenseRepository;
 import idusw.sbb.triplinker.domain.plan.entity.TravelPlan;
 import idusw.sbb.triplinker.domain.plan.repository.TravelPlanRepository;
+import idusw.sbb.triplinker.domain.plan.service.TripAccessGuard;
+import idusw.sbb.triplinker.global.exception.ForbiddenException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,10 +26,11 @@ import java.util.Map;
 public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final TravelPlanRepository travelPlanRepository;
+    private final TripAccessGuard tripAccessGuard;
 
-    public BudgetReportResponseDto getBudgetReport(Long planId) {
-        TravelPlan plan = travelPlanRepository.findById(planId)
-                .orElseThrow(() -> new EntityNotFoundException("여행 플랜을 찾을 수 없습니다."));
+    // 가계부는 그 여행의 주인 · 초대된 멤버만 본다 (전에는 로그인만 확인해 번호만 바꾸면 남의 가계부가 보였다)
+    public BudgetReportResponseDto getBudgetReport(Long userId, Long planId) {
+        TravelPlan plan = tripAccessGuard.requireMember(planId, userId);
 
         Long budget = (plan.getForm() != null) ? plan.getForm().getBudget() : null;
 
@@ -85,9 +88,8 @@ public class ExpenseService {
     }
 
     @Transactional
-    public void addExpense(Long planId, ExpenseAddRequestDto dto) {
-        TravelPlan plan = travelPlanRepository.findById(planId)
-                .orElseThrow(() -> new EntityNotFoundException("여행 플랜을 찾을 수 없습니다."));
+    public void addExpense(Long userId, Long planId, ExpenseAddRequestDto dto) {
+        TravelPlan plan = tripAccessGuard.requireEditor(planId, userId);
 
         Expense expense = Expense.builder()
                 .plan(plan)
@@ -103,9 +105,8 @@ public class ExpenseService {
     }
 
     @Transactional
-    public void updateExpense(Long expenseId, ExpenseAddRequestDto dto) {
-        Expense expense = expenseRepository.findById(expenseId)
-                .orElseThrow(() -> new EntityNotFoundException("지출 항목을 찾을 수 없습니다."));
+    public void updateExpense(Long userId, Long planId, Long expenseId, ExpenseAddRequestDto dto) {
+        Expense expense = findOwnedExpense(userId, planId, expenseId);
 
         expense.update(
                 dto.getCategory(),
@@ -117,9 +118,20 @@ public class ExpenseService {
 
     //실제 지출 삭제
     @Transactional
-    public void deleteExpense(Long expenseId) {
+    public void deleteExpense(Long userId, Long planId, Long expenseId) {
+        Expense expense = findOwnedExpense(userId, planId, expenseId);
+        expenseRepository.delete(expense);
+    }
+
+    // 주소의 여행에 편집 권한이 있고, 그 지출이 정말 그 여행 것인지까지 본다
+    // (자기 여행 번호에 남의 지출 번호를 섞어 보내는 경우를 막음)
+    private Expense findOwnedExpense(Long userId, Long planId, Long expenseId) {
+        tripAccessGuard.requireEditor(planId, userId);
         Expense expense = expenseRepository.findById(expenseId)
                 .orElseThrow(() -> new EntityNotFoundException("지출 항목을 찾을 수 없습니다."));
-        expenseRepository.delete(expense);
+        if (expense.getPlan() == null || !planId.equals(expense.getPlan().getId())) {
+            throw new ForbiddenException();
+        }
+        return expense;
     }
 }

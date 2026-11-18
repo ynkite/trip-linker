@@ -30,6 +30,7 @@ public class TravelPlanServiceImpl implements TravelPlanService {
     private final UserRepository userRepository;
     private final ExpenseRepository expenseRepository;
     private final TripMemberRepository tripMemberRepository;
+    private final TripAccessGuard tripAccessGuard;
 
     @Override
     @Transactional
@@ -152,6 +153,8 @@ public class TravelPlanServiceImpl implements TravelPlanService {
     @Override
     @Transactional
     public Long loadPreviousPreference(Long userId, Long tripId) {
+        // 남의 여행에 내 취향 폼을 덮어 넣지 못하게 (주인 · 편집자만)
+        tripAccessGuard.requireEditor(tripId, userId);
         PlanInputForm prev = planInputFormRepository
                 .findByUserIdAndPreferenceSourceNotOrderByCreatedAtDesc(userId, "AUTO_LOADED")
                 .stream()
@@ -197,6 +200,8 @@ public class TravelPlanServiceImpl implements TravelPlanService {
     @Override
     @Transactional
     public void updateInputForm(Long userId, Long tripId, java.util.Map<String, String> fields) {
+        // 전에는 userId 를 받기만 하고 쓰지 않아, 번호만 바꾸면 남의 목적지 · 예산을 바꿀 수 있었다
+        tripAccessGuard.requireEditor(tripId, userId);
         String destination = fields.get("destination");
         if (destination != null) {
             travelPlanRepository.updateDestination(tripId, destination);

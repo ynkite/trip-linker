@@ -7,6 +7,7 @@ import idusw.sbb.triplinker.domain.user.dto.UserNicknameUpdateRequest;
 import idusw.sbb.triplinker.domain.user.dto.UserInfoResponseDto;
 import idusw.sbb.triplinker.domain.user.service.UserService;
 import idusw.sbb.triplinker.global.common.ApiResponse;
+import idusw.sbb.triplinker.global.exception.ForbiddenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -36,7 +37,10 @@ public class UserController {
 
     // 회원 프로필 조회 (GET) - 특정 유저의 상세 정보를 반환합니다.
     @GetMapping("/{userId}")
-    public ResponseEntity<UserInfoResponseDto> getProfile(@PathVariable Long userId) {
+    public ResponseEntity<UserInfoResponseDto> getProfile(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                          @PathVariable Long userId) {
+        // 이메일 · 생년월일이 들어 있어 본인과 관리자만 (화면은 /me 를 쓰고 이 주소는 부르지 않음)
+        requireSelfOrAdmin(userDetails, userId);
         UserInfoResponseDto response = userService.getProfile(userId);
         return ResponseEntity.ok(response);
     }
@@ -44,8 +48,11 @@ public class UserController {
     // 닉네임 변경 (PATCH) - 유저의 name(닉네임) 필드를 수정합니다
     @PatchMapping("/{userId}/nickname")
     public ResponseEntity<String> updateNickname(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long userId,
             @RequestBody UserNicknameUpdateRequest request) {
+        // 전에는 주소의 번호만 바꾸면 남의 닉네임을 바꿀 수 있었다
+        requireSelfOrAdmin(userDetails, userId);
         userService.updateNickname(userId, request);
         return ResponseEntity.ok("닉네임이 성공적으로 변경되었습니다.");
     }
@@ -124,5 +131,12 @@ public class UserController {
         Long myUserId = Long.valueOf(userDetails.getName());
         List<PostListResponseDto> likedPosts = postService.getMyLikedPosts(myUserId);
         return ResponseEntity.ok(ApiResponse.success("좋아요한 후기 조회 성공", likedPosts));
+    }
+
+    private static void requireSelfOrAdmin(CustomUserDetails me, Long userId) {
+        boolean admin = me != null && me.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        if (me == null || (!admin && !me.getUserId().equals(userId))) {
+            throw new ForbiddenException();
+        }
     }
 }
