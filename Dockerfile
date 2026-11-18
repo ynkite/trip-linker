@@ -35,6 +35,14 @@ EXPOSE 8081
 ENV SPRING_PROFILES_ACTIVE=prod \
     SPRING_CONFIG_ADDITIONAL_LOCATION=/config/
 
+# 운영에서는 SQL 출력과 Spring Security DEBUG 로그를 끈다.
+# /config 의 공통 설정이 개발용 값(show-sql=true, security DEBUG)을 그대로 가지고 있어도,
+# 환경 변수가 설정 파일보다 우선하므로 여기서 덮어쓴다. (jar 안의 application-prod 는 바깥 공통 설정보다 약해서 못 덮는다)
+# ddl-auto 는 그대로 둔다: 스키마 변경 도구(Flyway 등)가 없어 새 열이 update 로만 생기고,
+# validate 로 바꾸면 열 타입이 조금만 달라도 서버가 안 뜬다. 운영 DB 를 직접 맞춰 본 뒤 바꾼다.
+ENV SPRING_JPA_SHOW_SQL=false \
+    LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=INFO
+
 # 컨테이너 메모리 한도를 JVM이 인식하게 한다. 작은 컨테이너에서는 SerialGC가 오버헤드가 가장 적다.
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50 -XX:+UseSerialGC -XX:MaxMetaspaceSize=192m"
 
