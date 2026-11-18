@@ -1,5 +1,14 @@
 <div th:fragment="admin" xmlns:th="http://www.thymeleaf.org">
   <script>
+    /* 관리자 화면에 나오는 닉네임 · 이메일 · 글 제목 · 신고 사유는 회원이 쓴 글이라 HTML 로 믿지 않는다.
+     * _ah: 글자 그대로(태그 무력화), _aj: onclick='…' 안의 JS 문자열 */
+    function _ah(v) {
+      return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function _aj(v) {
+      return _ah(String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+    }
     /* ============================================================
      * [1구역 - 고정 UI 설정 블록]
      * ============================================================ */
@@ -254,12 +263,12 @@
           let suspCell='<span style="font-size:11px;color:var(--text3)">-</span>';
           let roleCell='<span style="font-size:11px;color:var(--text3)">탈퇴</span>';
           if(u.status!=='DELETED'){
-            if(u.role!=='ADMIN') suspCell=u.status==='ACTIVE'?`<button class="btn-o" style="color:var(--coral);border-color:var(--coral);padding:4px 12px;font-size:12px" onclick="openSuspendModal('${u.username}','${u.userId}')">정지</button>`:`<button class="btn-o" style="color:var(--sage-d);border-color:var(--sage-d);padding:4px 12px;font-size:12px" onclick="unsuspendUser(${u.userId})">정지해제</button>`;
+            if(u.role!=='ADMIN') suspCell=u.status==='ACTIVE'?`<button class="btn-o" style="color:var(--coral);border-color:var(--coral);padding:4px 12px;font-size:12px" onclick="openSuspendModal('${_aj(u.username)}','${u.userId}')">정지</button>`:`<button class="btn-o" style="color:var(--sage-d);border-color:var(--sage-d);padding:4px 12px;font-size:12px" onclick="unsuspendUser(${u.userId})">정지해제</button>`;
             else suspCell='<span style="font-size:11px;color:var(--text3)">-</span>';
-            if(u.role==='USER') roleCell=u.status==='SUSPENDED'?`<button class="btn-o" style="padding:4px 12px;font-size:12px;opacity:.45;cursor:not-allowed" disabled>관리자 전환</button>`:`<button class="btn-o" style="padding:4px 12px;font-size:12px" onclick="changeRole('promote','${u.userId}','${u.username}')">관리자 전환</button>`;
-            else roleCell=`<button class="btn-o" style="padding:4px 12px;font-size:12px" onclick="changeRole('demote','${u.userId}','${u.username}')">일반 회원 전환</button>`;
+            if(u.role==='USER') roleCell=u.status==='SUSPENDED'?`<button class="btn-o" style="padding:4px 12px;font-size:12px;opacity:.45;cursor:not-allowed" disabled>관리자 전환</button>`:`<button class="btn-o" style="padding:4px 12px;font-size:12px" onclick="changeRole('promote','${u.userId}','${_aj(u.username)}')">관리자 전환</button>`;
+            else roleCell=`<button class="btn-o" style="padding:4px 12px;font-size:12px" onclick="changeRole('demote','${u.userId}','${_aj(u.username)}')">일반 회원 전환</button>`;
           }
-          return`<tr data-username="${u.username}" data-email="${u.email}" data-name="${(u.name||'').replace(/"/g,'')}"><td>#${u.userId}</td><td>${u.username}</td><td style="color:var(--text2)">${u.name||'-'}</td><td>${u.email}</td><td>${dateStr}</td><td>${badge}</td><td style="white-space:nowrap">${suspCell}</td><td style="white-space:nowrap">${roleCell}</td></tr>`;
+          return`<tr data-username="${_ah(u.username)}" data-email="${_ah(u.email)}" data-name="${_ah(u.name||'')}"><td>#${u.userId}</td><td>${_ah(u.username)}</td><td style="color:var(--text2)">${_ah(u.name||'-')}</td><td>${_ah(u.email)}</td><td>${dateStr}</td><td>${badge}</td><td style="white-space:nowrap">${suspCell}</td><td style="white-space:nowrap">${roleCell}</td></tr>`;
         }).join('');
         filterAdminUserRows();
       }
@@ -283,16 +292,16 @@
         const sorted=_applySort(window._rSort.list,col,window._rSort.dir);
         const tbody=document.getElementById('adminReportTable'); if(!tbody) return;
         if(!sorted.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3)">신고 내역이 없습니다</td></tr>';return;}
-        const esc=s=>(s||'').toString().replace(/'/g,"\'");
+        const esc=s=>_aj(s||'');
         tbody.innerHTML=sorted.map(r=>{
           const actionCell=r.status==='PENDING'?`<button class="btn-o" style="padding:3px 8px;font-size:11px;color:var(--coral);border-color:var(--coral)" onclick="openReportAction('hide',${r.reportId},'${esc(r.postTitle)}','${esc(r.reporterName)}','${esc(r.reason)}')">숨김</button>&nbsp;<button class="btn-o" style="padding:3px 8px;font-size:11px" onclick="openReportAction('reject',${r.reportId},'${esc(r.postTitle)}','${esc(r.reporterName)}','${esc(r.reason)}')">반려</button>`:'<span style="font-size:11px;color:var(--text3)">-</span>';
-          const pName=r.processedByName?`[${r.processedByName}]`:'';
+          const pName=r.processedByName?`[${_ah(r.processedByName)}]`:'';
           let rStatusBadge;
           if(r.status==='PENDING') rStatusBadge='<span class="badge" style="background:#FEF3F2;color:var(--coral);border:1px solid #FECACA;padding:3px 8px;border-radius:12px;font-size:11px">미처리</span>';
           else if(r.status==='RESOLVED') rStatusBadge=`<span class="badge" style="background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;padding:3px 8px;border-radius:12px;font-size:11px">신고${pName}</span>`;
           else if(r.status==='REJECTED') rStatusBadge=`<span class="badge" style="background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;padding:3px 8px;border-radius:12px;font-size:11px">반려${pName}</span>`;
           else rStatusBadge=`<span class="badge">${r.status}</span>`;
-          return`<tr><td>#${r.reportId}</td><td><span style="cursor:pointer;color:var(--sage-d);text-decoration:underline;font-weight:600" onclick="openAdminPostDetail(${r.postId})">${r.postTitle||('#'+r.postId)}</span></td><td>${r.reporterName||'-'}</td><td style="white-space:nowrap"><span style="font-size:12px;color:var(--text2);margin-right:6px;font-weight:500">${(r.commentId && r.commentId > 0) ? esc(r.commentAuthorName||'-') : esc(r.postAuthorName||'-')}</span><button class="btn-o" style="padding:2px 8px;font-size:11px" onclick="findReportedAuthor(${r.postId},'${esc(r.commentAuthorName||'')}')">보기</button></td><td>${r.reason}</td><td>${rStatusBadge}</td><td style="white-space:nowrap">${actionCell}</td></tr>`;
+          return`<tr><td>#${r.reportId}</td><td><span style="cursor:pointer;color:var(--sage-d);text-decoration:underline;font-weight:600" onclick="openAdminPostDetail(${r.postId})">${_ah(r.postTitle||('#'+r.postId))}</span></td><td>${_ah(r.reporterName||'-')}</td><td style="white-space:nowrap"><span style="font-size:12px;color:var(--text2);margin-right:6px;font-weight:500">${(r.commentId && r.commentId > 0) ? _ah(r.commentAuthorName||'-') : _ah(r.postAuthorName||'-')}</span><button class="btn-o" style="padding:2px 8px;font-size:11px" onclick="findReportedAuthor(${r.postId},'${esc(r.commentAuthorName||'')}')">보기</button></td><td>${_ah(r.reason)}</td><td>${rStatusBadge}</td><td style="white-space:nowrap">${actionCell}</td></tr>`;
         }).join('');
       };
 
@@ -378,7 +387,7 @@
                 if(popularEl){
                   const pops=d.popularPosts||[];
                   popularEl.innerHTML=pops.length
-                          ?pops.map(p=>`<tr><td>${p.title}</td><td>${p.viewCount}</td><td>${p.likeCount}</td></tr>`).join('')
+                          ?pops.map(p=>`<tr><td>${_ah(p.title)}</td><td>${p.viewCount}</td><td>${p.likeCount}</td></tr>`).join('')
                           :'<tr><td colspan="3" style="text-align:center;color:var(--text3)">인기 게시글이 없습니다</td></tr>';
                 }
               });
@@ -503,7 +512,7 @@
                   if(u.status!=='DELETED'){
                     if(u.role!=='ADMIN'){
                       suspCell=u.status==='ACTIVE'
-                              ?`<button class="btn-o" style="color:var(--coral);border-color:var(--coral);padding:4px 12px;font-size:12px" onclick="openSuspendModal('${u.username}','${u.userId}')">정지</button>`
+                              ?`<button class="btn-o" style="color:var(--coral);border-color:var(--coral);padding:4px 12px;font-size:12px" onclick="openSuspendModal('${_aj(u.username)}','${u.userId}')">정지</button>`
                               :`<button class="btn-o" style="color:var(--sage-d);border-color:var(--sage-d);padding:4px 12px;font-size:12px" onclick="unsuspendUser(${u.userId})">정지해제</button>`;
                     } else {
                       suspCell='<span style="font-size:11px;color:var(--text3)">-</span>';
@@ -511,16 +520,16 @@
                     if(u.role==='USER'){
                       roleCell=(u.status==='SUSPENDED')
                               ?`<button class="btn-o" style="padding:4px 12px;font-size:12px;opacity:.45;cursor:not-allowed" disabled title="정지된 회원은 관리자로 전환할 수 없습니다">관리자 전환</button>`
-                              :`<button class="btn-o" style="padding:4px 12px;font-size:12px" onclick="changeRole('promote','${u.userId}','${u.username}')">관리자 전환</button>`;
+                              :`<button class="btn-o" style="padding:4px 12px;font-size:12px" onclick="changeRole('promote','${u.userId}','${_aj(u.username)}')">관리자 전환</button>`;
                     } else {
-                      roleCell=`<button class="btn-o" style="padding:4px 12px;font-size:12px" onclick="changeRole('demote','${u.userId}','${u.username}')">일반 회원 전환</button>`;
+                      roleCell=`<button class="btn-o" style="padding:4px 12px;font-size:12px" onclick="changeRole('demote','${u.userId}','${_aj(u.username)}')">일반 회원 전환</button>`;
                     }
                   }
-                  return`<tr data-username="${u.username}" data-email="${u.email}" data-name="${(u.name||'').replace(/"/g,'')}">
+                  return`<tr data-username="${_ah(u.username)}" data-email="${_ah(u.email)}" data-name="${_ah(u.name||'')}">
             <td>#${u.userId}</td>
-            <td>${u.username}</td>
-            <td style="color:var(--text2)">${u.name||'-'}</td>
-            <td>${u.email}</td>
+            <td>${_ah(u.username)}</td>
+            <td style="color:var(--text2)">${_ah(u.name||'-')}</td>
+            <td>${_ah(u.email)}</td>
             <td>${dateStr}</td>
             <td>${badge}</td>
             <td style="white-space:nowrap">${suspCell}</td>
@@ -594,13 +603,13 @@
                 }
                 window._rSort.list=list;
                 tbody.innerHTML=list.map(r=>{
-                  const esc=s=>(s||'').toString().replace(/'/g,"\\'");
+                  const esc=s=>_aj(s||'');
                   const actionCell=r.status==='PENDING'
                           ?`<button class="btn-o" style="padding:3px 8px;font-size:11px;color:var(--coral);border-color:var(--coral)" onclick="openReportAction('hide',${r.reportId},'${esc(r.postTitle)}','${esc(r.reporterName)}','${esc(r.reason)}')">숨김</button>&nbsp;`
                           +`<button class="btn-o" style="padding:3px 8px;font-size:11px" onclick="openReportAction('reject',${r.reportId},'${esc(r.postTitle)}','${esc(r.reporterName)}','${esc(r.reason)}')">반려</button>`
                           :'<span style="font-size:11px;color:var(--text3)">-</span>';
                   // 한글 상태 배지 + 처리자 이름
-                  const pName=r.processedByName?`[${r.processedByName}]`:'';
+                  const pName=r.processedByName?`[${_ah(r.processedByName)}]`:'';
                   let rStatusBadge;
                   if(r.status==='PENDING') rStatusBadge='<span class="badge" style="background:#FEF3F2;color:var(--coral);border:1px solid #FECACA;padding:3px 8px;border-radius:12px;font-size:11px">미처리</span>';
                   else if(r.status==='RESOLVED') rStatusBadge=`<span class="badge" style="background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;padding:3px 8px;border-radius:12px;font-size:11px">신고${pName}</span>`;
@@ -610,13 +619,13 @@
             <td>#${r.reportId}</td>
             <td><span style="cursor:pointer;color:var(--sage-d);text-decoration:underline;font-weight:600"
                       onclick="openAdminPostDetail(${r.postId})"
-                      title="클릭하면 해당 게시글로 이동합니다">${r.postTitle||('#'+r.postId)}</span></td>
-            <td>${r.reporterName||'-'}</td>
+                      title="클릭하면 해당 게시글로 이동합니다">${_ah(r.postTitle||('#'+r.postId))}</span></td>
+            <td>${_ah(r.reporterName||'-')}</td>
             <td style="white-space:nowrap">
-              <span style="font-size:12px;color:var(--text2);margin-right:6px;font-weight:500">${(r.commentId && r.commentId > 0) ? esc(r.commentAuthorName||'-') : esc(r.postAuthorName||'-')}</span>
+              <span style="font-size:12px;color:var(--text2);margin-right:6px;font-weight:500">${(r.commentId && r.commentId > 0) ? _ah(r.commentAuthorName||'-') : _ah(r.postAuthorName||'-')}</span>
               <button class="btn-o" style="padding:2px 8px;font-size:11px" onclick="findReportedAuthor(${r.postId},'${esc(r.commentAuthorName||'')}')">보기</button>
             </td>
-            <td>${r.reason}</td>
+            <td>${_ah(r.reason)}</td>
             <td>${rStatusBadge}</td>
             <td style="white-space:nowrap">${actionCell}</td>
           </tr>`;

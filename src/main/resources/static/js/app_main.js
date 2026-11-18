@@ -1983,8 +1983,9 @@ async function sendMsg() {
                     row = document.createElement('div');
                     row.id = rowId;
                     row.className = 'asc-row';
-                    row.innerHTML = `<div class="asc-label">${label}</div><div class="asc-val">${value}</div><button class="asc-del" onclick="event.stopPropagation();
-                clearExtraRow('${label.replace(/'/g,"\\'")}')">✕</button>`;
+                    // AI 답에서 꺼낸 글이라 HTML 로 넣지 않는다 (LLM 출력을 그대로 innerHTML 하지 않음)
+                    row.innerHTML = `<div class="asc-label">${escapeHtmlBubble(label)}</div><div class="asc-val">${escapeHtmlBubble(value)}</div><button class="asc-del" onclick="event.stopPropagation();
+                clearExtraRow('${escapeHtmlBubble(label.replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}')">✕</button>`;
                     extraContainer.appendChild(row);
                 } else {
                     row.querySelector('.asc-val').textContent = value;
@@ -2602,7 +2603,7 @@ function _applyCurationPreferences(c) {
             recoRows.forEach(item => {
                 const row = document.createElement('div');
                 row.className = 'asc-row';
-                row.innerHTML = `<div class="asc-label">${item.label}</div><div class="asc-val">${item.value}</div><button class="asc-del" onclick="event.stopPropagation();clearExtraRow('${item.label.replace(/'/g,"\\'")}')">✕</button>`;
+                row.innerHTML = `<div class="asc-label">${escapeHtmlBubble(item.label)}</div><div class="asc-val">${escapeHtmlBubble(item.value)}</div><button class="asc-del" onclick="event.stopPropagation();clearExtraRow('${escapeHtmlBubble(String(item.label).replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}')">✕</button>`;
                 extraContainer.appendChild(row);
             });
             const emptyMsg = document.getElementById('extra-empty-msg');
