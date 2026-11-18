@@ -2,6 +2,8 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.14'
     id 'io.spring.dependency-management' version '1.1.7'
+    // 정적 보안 점검 (./gradlew spotbugsMain → build/reports/spotbugs/main.html). 실행 jar 에는 들어가지 않는다.
+    id 'com.github.spotbugs' version '6.1.7'
 }
 
 group = 'idusw.sbb'
@@ -70,6 +72,27 @@ dependencyManagement {
     imports {
         mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
     }
+}
+
+dependencies {
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.13.0'
+}
+
+spotbugs {
+    ignoreFailures = true          // 점검 결과로 빌드를 멈추지 않는다 (보고서만 남김)
+    effort = com.github.spotbugs.snom.Effort.valueOf("MAX")
+    reportLevel = com.github.spotbugs.snom.Confidence.valueOf("MEDIUM")
+}
+
+tasks.named('spotbugsMain') {
+    reports {
+        html { required = true }
+        xml { required = true }
+    }
+}
+
+tasks.named('spotbugsTest') {
+    enabled = false
 }
 
 tasks.named('test') {
