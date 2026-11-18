@@ -16,8 +16,9 @@
   <link rel="stylesheet" th:href="@{/css/styles_responsive_budget.css}">
   <link rel="stylesheet" th:href="@{/css/styles_footer.css}">
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=50a304fa42a0bd2d294ac871e3acae14&autoload=false&libraries=services"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- 가계부 PDF. CDN 파일이 바뀌면 브라우저가 실행하지 않도록 무결성 값(SRI)을 붙임. jsPDF 2.5.1 은 알려진 취약점 12건이라 4.2.1 로 올림 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha512-plOdviVmws4Y3JAvbnpfKb2hVxKM1lCwsi3vmElYRj+tiDLffZ4FVUj5a8vyKJ9pIgl8JCAHEJ4D1iUKBecswg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 </head>
 <body style="visibility: hidden">
