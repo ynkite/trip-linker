@@ -53,7 +53,12 @@ public class AuthController {
     // 회원가입 API
     @PostMapping("/signup")
     public ResponseEntity<String> signUp(@Valid @RequestBody SignUpRequestDTO dto) {
+        // 이메일 인증을 화면에서만 확인하던 것을 서버에서도 확인 (API 로 바로 보내 남의 이메일로 가입하는 것 막기)
+        if (!emailAuthService.isVerified(dto.getEmail())) {
+            return ResponseEntity.badRequest().body("이메일 인증을 먼저 완료해 주세요.");
+        }
         authService.signUp(dto);
+        emailAuthService.consume(dto.getEmail());
         return ResponseEntity.ok("회원가입이 완료되었습니다.");
     }
 
@@ -127,6 +132,8 @@ public class AuthController {
             if (isVerified) {
                 // 정규식 검사를 통과시킨 안전한 비밀번호만 이쪽으로 넘어옵니다.
                 authService.updatePassword(dto.getEmail(), dto.getNewPassword());
+                // 쓴 인증번호는 지운다 (전에는 3분 안에 같은 번호로 한 번 더 바꿀 수 있었다)
+                emailAuthService.consume(dto.getEmail());
                 return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
             }
             return ResponseEntity.badRequest().body("인증번호가 틀렸거나 만료되었습니다.");

@@ -39,6 +39,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage()));
     }
 
+    // 인증 메일 · AI 호출을 짧은 시간에 너무 많이 보낼 때
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTooMany(TooManyRequestsException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ApiResponse.error(ex.getMessage()));
+    }
+
     // 사유 누락, 존재하지 않는 ID 조회, 잘못된 상태 변경 시도 등
     // 프로젝트 전반에서 공통으로 던지는 일반 검증 예외를 한 곳에서 처리
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
