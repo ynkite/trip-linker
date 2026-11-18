@@ -175,8 +175,17 @@
                   btn.style.cursor = "wait";             // 로딩 커서
                 }
 
-                fetch(`${AUTH_API.sendEmail}?email=${email}`, { method: 'POST' })
-                        .then(() => alert(AUTH_VALID_MSG.emailSent))
+                fetch(`${AUTH_API.sendEmail}?email=${encodeURIComponent(email)}`, { method: 'POST' })
+                        .then(async (res) => {
+                          // 서버가 거절(발송 횟수 초과 429 등)하면 그 안내를 보여 준다
+                          if (!res.ok) {
+                            let msg = "⚠️ 메일 발송에 실패했습니다. 다시 시도해주세요.";
+                            try { msg = (await res.json()).message || msg; } catch (e) {}
+                            alert(msg);
+                            return;
+                          }
+                          alert(AUTH_VALID_MSG.emailSent);
+                        })
                         .catch(() => alert("⚠️ 메일 발송에 실패했습니다. 다시 시도해주세요."))
                         .finally(() => {
                           // 3. 발송 완료 후(성공/실패 무관) 버튼을 원래대로 복구합니다.
