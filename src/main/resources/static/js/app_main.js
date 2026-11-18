@@ -792,8 +792,11 @@ function _handleOAuthCallback() {
         return;
     }
 
-    var accessToken  = params.get('accessToken');
-    var refreshToken = params.get('refreshToken');
+    // 토큰은 주소의 # 뒤(fragment)로 받는다 — # 뒤는 서버로 전송되지 않아 접속 기록 · Referer 에 남지 않는다.
+    // (예전 서버가 ?accessToken= 으로 보내는 경우도 그대로 받는다)
+    var hashParams   = new URLSearchParams(location.hash.replace(/^#/, ''));
+    var accessToken  = hashParams.get('accessToken')  || params.get('accessToken');
+    var refreshToken = hashParams.get('refreshToken') || params.get('refreshToken');
     if (accessToken && refreshToken) {
         history.replaceState({}, '', location.pathname);
         _initSession(accessToken, refreshToken).then(function() {

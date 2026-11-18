@@ -46,14 +46,14 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 .build());
 
         //현재 서버 주소로 동적 변경
-        //토큰을 쿼리 파라미터로 담아 현재 서버의 루트 페이지로 리다이렉트
-        //app_main.js의 _handleOAuthCallback()이 URL 파라미터에서 토큰을 읽어 처리
+        //토큰을 주소의 # 뒤(fragment)에 담아 현재 서버의 루트 페이지로 리다이렉트
+        //(전에는 ?accessToken= 쿼리로 넘겨 서버 접속 기록 · 브라우저 기록 · Referer 에 토큰이 남았다. # 뒤는 서버로 가지 않는다)
+        //app_main.js의 _handleOAuthCallback()이 location.hash 에서 토큰을 읽어 처리
         String baseUrl = request.getScheme() + "://" + request.getServerName()
                 + (request.getServerPort() != 80 && request.getServerPort() != 443 ? ":" + request.getServerPort() : "")
                 + "/";
         String targetUrl = UriComponentsBuilder.fromUriString(baseUrl)
-                .queryParam("accessToken", accessToken)
-                .queryParam("refreshToken", refreshToken)
+                .fragment("accessToken=" + accessToken + "&refreshToken=" + refreshToken)
                 .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
