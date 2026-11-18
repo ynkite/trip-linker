@@ -576,12 +576,46 @@
         <button class="btn-social" onclick="tryGoogleLogin()">🔵 구글</button>
         <button class="btn-social" onclick="tryKakaoLogin()">🟡 카카오</button>
       </div>
+      <!-- 테스트 로그인: 서버 설정(APP_DEMO_LOGIN_ENABLED)이 켜져 있을 때만 보인다 -->
+      <div id="demo-login-row" style="display:none;gap:9px;margin-top:9px">
+        <button class="btn-social" onclick="tryDemoLogin('user')">유저 테스트 로그인</button>
+        <button class="btn-social" onclick="tryDemoLogin('admin')">관리자 테스트 로그인</button>
+      </div>
       <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--text3)">
         계정 없으신가요? <button class="auth-link" onclick="go('signup')">회원가입</button>
       </div>
     </div>
   </div>
 </div>
+<script>
+  // 테스트 로그인 단추. 비밀번호 없이 role 만 보내고, 계정은 서버가 정한다.
+  // 토큰을 받은 뒤는 일반 로그인(tryLogin)과 같은 _initSession 을 탄다.
+  async function tryDemoLogin(role) {
+    const w = document.getElementById('login-warn');
+    const res = await api.post('/api/auth/demo', { role: role });
+    if (!res || !res.success || !res.data) {
+      if (w) {
+        w.innerHTML = '⚠️ ' + ((res && res.message) || '테스트 로그인을 할 수 없습니다.');
+        w.style.display = 'flex';
+      }
+      return;
+    }
+    if (w) w.style.display = 'none';
+    await _initSession(res.data.accessToken, res.data.refreshToken);
+    toast((_currentUser ? _currentUser.name : '테스트 계정') + '님, 환영합니다! 🎉');
+    go(role === 'admin' ? 'admin' : 'main');
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    fetch('/api/auth/demo', { method: 'GET' })
+      .then(function (r) {
+        if (!r.ok) return;
+        const row = document.getElementById('demo-login-row');
+        if (row) row.style.display = 'flex';
+      })
+      .catch(function () { /* 꺼져 있거나 서버 오류면 단추를 숨긴 채로 둔다 */ });
+  });
+</script>
 
 <!-- ══════════════════════════════════════════════════
      비밀번호 재설정 모달

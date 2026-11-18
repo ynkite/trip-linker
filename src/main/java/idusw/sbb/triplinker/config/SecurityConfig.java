@@ -4,6 +4,7 @@ import idusw.sbb.triplinker.domain.auth.filter.JwtAuthenticationFilter;
 import idusw.sbb.triplinker.domain.auth.security.OAuth2FailureHandler;
 import idusw.sbb.triplinker.domain.auth.security.OAuth2SuccessHandler;
 import idusw.sbb.triplinker.domain.auth.service.CustomOAuth2UserService;
+import idusw.sbb.triplinker.domain.demo.filter.DemoGuardFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final DemoGuardFilter demoGuardFilter;
 
     //비밀번호 암호화 도구 등록
     @Bean
@@ -70,6 +72,7 @@ public class SecurityConfig {
                                 "/api/auth/verify-email",           //이메일 인증 확인
                                 "/api/auth/password/reset-request", //비밀번호 재설정 요청
                                 "/api/auth/password/reset",         //비밀번호 재설정 처리
+                                "/api/auth/demo",                   //테스트 로그인 단추 (APP_DEMO_LOGIN_ENABLED)
                                 "/api/maps/weather",
                                 "/oauth2/authorization/**",         //소셜 로그인 요청
                                 "/login/oauth2/code/**"             //소셜 로그인 콜백
@@ -93,7 +96,8 @@ public class SecurityConfig {
 
 
                         // 관리자 전용 기능
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // 테스트 관리자(DEMO_ADMIN)는 읽기만 가능. 바꾸는 요청은 DemoGuardFilter 가 403 으로 막는다.
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "DEMO_ADMIN")
 
                         // API 명세서(Swagger) 접근 허용(개발 시 편하게 확인 가능)
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
@@ -111,7 +115,9 @@ public class SecurityConfig {
                 )
 
                 // Spring Security의 기본 인증 필터가 동작하기 전에, 커스텀 JWT 필터가 먼저 토큰을 검증하도록 설정
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // 테스트 계정 제한(읽기 전용 관리자, AI 하루 횟수). JWT 필터가 인증을 채운 뒤에 돈다.
+                .addFilterAfter(demoGuardFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
