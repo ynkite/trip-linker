@@ -1149,7 +1149,9 @@ public class AiRouteService {
                 // 좌표 확보
                 java.util.Map<com.fasterxml.jackson.databind.node.ObjectNode, double[]> coord = new java.util.HashMap<>();
                 for (var s : spots) {
-                    double[] c = (s.has("lat") && s.has("lng"))
+                    // AI 가 적어 넣은 lat/lng 는 믿지 않는다. 카카오에서 찾은 좌표(isFound=true)만 쓰고,
+                    // 나머지는 이름으로 다시 찾는다 — 지어낸 장소가 그럴듯한 좌표를 달고 「좌표 없음 삭제」 를 통과하던 구멍.
+                    double[] c = (s.path("isFound").asBoolean(false) && s.has("lat") && s.has("lng"))
                             ? new double[]{ s.path("lat").asDouble(), s.path("lng").asDouble() }
                             : geocodeCached(withRegion(dest, s.path("name").asText("")), geo);
                     coord.put(s, c);
@@ -1510,6 +1512,9 @@ public class AiRouteService {
                         plObj.put("isFound", true);
                     } else {
                         plObj.put("isFound", false);
+                        // 카카오에서 확인 못 한 좌표(AI 가 지어냈거나 화면이 보낸 값)는 저장하지 않는다
+                        plObj.remove("lat");
+                        plObj.remove("lng");
                         System.out.println("⚠️ [좌표 실패] " + nm);
                     }
                 }
