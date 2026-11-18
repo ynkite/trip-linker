@@ -35,6 +35,16 @@ public class PostController {
     private final SystemService systemService;
     private final LocalFileService localFileService;
 
+    private static Long viewerId(CustomUserDetails me) {
+        return me != null ? me.getUserId() : null;
+    }
+
+    // 숨김 글을 볼 수 있는 관리자 (테스트 관리자는 읽기 전용 관리자라 같이 본다)
+    private static boolean isAdmin(CustomUserDetails me) {
+        return me != null && me.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ROLE_DEMO_ADMIN".equals(a.getAuthority()));
+    }
+
     // 커뮤니티 - 이미지 업로드
     @PostMapping("/images")
     public ResponseEntity<List<String>> uploadImages(
@@ -54,7 +64,8 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String category
+            @RequestParam(required = false) String category,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         String normalizedSort = (sort == null) ? "" : sort;
 
@@ -71,7 +82,7 @@ public class PostController {
         // Pageable 객체 생성 (안전하게 변환된 sortProperty 사용)
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortProperty));
 
-        Page<PostListResponseDto> posts = postService.getPosts(pageable, category, normalizedSort);
+        Page<PostListResponseDto> posts = postService.getPosts(pageable, category, normalizedSort, viewerId(userDetails), isAdmin(userDetails));
 
         return ResponseEntity.ok(
                 ApiResponse.success("게시글 목록 조회 성공", posts)
@@ -123,7 +134,7 @@ public class PostController {
     ) {
         Long userId = userDetails != null ? userDetails.getUserId() : null;
 
-        PostDetailResponseDto post = postService.getPost(userId, postId);
+        PostDetailResponseDto post = postService.getPost(userId, postId, isAdmin(userDetails));
 
         return ResponseEntity.ok(
                 ApiResponse.success("게시글 상세 조회 성공", post)
@@ -161,9 +172,10 @@ public class PostController {
     // 커뮤니티 - 댓글 목록 조회
     @GetMapping("/{postId}/comments")
     public ResponseEntity<List<PostDetailResponseDto.CommentInfo>> getComments(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId
     ) {
-        return ResponseEntity.ok(postService.getComments(postId));
+        return ResponseEntity.ok(postService.getComments(postId, viewerId(userDetails), isAdmin(userDetails)));
     }
 
     // 커뮤니티 - 댓글 작성
@@ -307,10 +319,12 @@ public class PostController {
     // 게시글별 장소 리뷰 조회
     @GetMapping("/{postId}/place-reviews")
     public ResponseEntity<ApiResponse<List<PlaceReviewResponseDto>>> getPlaceReviewsByPost(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long postId
     ) {
         return ResponseEntity.ok(
-                ApiResponse.success("장소 리뷰 조회 성공", postService.getPlaceReviewsByPost(postId))
+                ApiResponse.success("장소 리뷰 조회 성공",
+                        postService.getPlaceReviewsByPost(postId, viewerId(userDetails), isAdmin(userDetails)))
         );
     }
 

@@ -523,8 +523,10 @@
       await _loadMyScrappedPlaceIds();
       let top3Routes = typeof MOCK_TOP3 !== 'undefined' ? MOCK_TOP3 : null;
       if (!top3Routes && typeof api !== 'undefined') {
-        const res = await api.get('/api/posts?sort=scrap&size=3&category=ROUTE');
+        // 관리자에게는 목록 API 가 숨김 글도 주므로(관리용) 메인 랭킹에서는 한 번 더 걸러 3개를 채운다
+        const res = await api.get('/api/posts?sort=scrap&size=6&category=ROUTE');
         top3Routes = res.success ? (res.data.content || res.data || []) : [];
+        top3Routes = top3Routes.filter(p => !p.hidden).slice(0, 3);
       }
 
       const top3Grid = document.querySelector('.top3-grid');

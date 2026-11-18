@@ -68,18 +68,41 @@ public class PostService {
                 .collect(Collectors.toList());
     }
 
+    /** 숨김(HIDDEN) 글은 작성자와 관리자만 본다. 삭제(DELETED) 글은 아무도 못 본다. */
+    static boolean canSee(Post post, Long viewerId, boolean admin) {
+        if (post == null) return false;
+        if ("ACTIVE".equals(post.getStatus())) return true;
+        if (!"HIDDEN".equals(post.getStatus())) return false;
+        return admin || (viewerId != null && post.getUser() != null && Objects.equals(post.getUser().getId(), viewerId));
+    }
+
+    /** 상세 · 댓글 · 장소 후기처럼 글 하나를 여는 길에서 쓴다. 볼 수 없는 글은 「없는 글」 과 같은 답을 준다. */
+    private Post findVisiblePost(Long postId, Long viewerId, boolean admin) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+        if (!canSee(post, viewerId, admin)) {
+            throw new IllegalArgumentException("게시글을 찾을 수 없습니다.");
+        }
+        return post;
+    }
+
     // 커뮤니티 - 게시글 목록 조회
-    public Page<PostListResponseDto> getPosts(Pageable pageable, String category, String sort) {
+    // 숨김 글은 관리자에게는 모두, 일반 회원에게는 자기 글만 나온다. 예전에는 누구에게나 내주고 화면 JS 가 걸렀는데,
+    // 메인 「인기 경로 TOP 3」 처럼 거르지 않는 화면에서는 숨긴 글이 그대로 보였다.
+    public Page<PostListResponseDto> getPosts(Pageable pageable, String category, String sort, Long viewerId, boolean admin) {
         Page<Post> posts;
+        boolean all = category == null || category.isBlank() || category.equalsIgnoreCase("all");
+        String categoryCode = all ? null : toCategoryCode(category);
 
         if ("scrap".equals(sort)) {
             // Post 엔티티에 scrapCount 컬럼이 없어 DB 정렬이 불가능 → 실제 스크랩 수를 집계해 메모리에서 정렬
-            posts = getPostsSortedByScrapCount(pageable, category);
-        } else if (category == null || category.isBlank() || category.equalsIgnoreCase("all")) {
+            posts = getPostsSortedByScrapCount(pageable, categoryCode, viewerId, admin);
+        } else if (!admin) {
+            posts = postRepository.findVisibleTo(viewerId, categoryCode, pageable);
+        } else if (all) {
             posts = postRepository.findByStatusInOrderByCreatedAtDesc(STATUS_VISIBLE, pageable);
         } else {
-            // 카테고리별 조회도 ACTIVE + HIDDEN 포함 (관리자/작성자가 숨김 글 볼 수 있도록)
-            String categoryCode = toCategoryCode(category);
+            // 관리자: ACTIVE + HIDDEN 모두 (숨김 글 관리용)
             posts = postRepository.findByStatusInAndCategoryOrderByCreatedAtDesc(
                     STATUS_VISIBLE, categoryCode, pageable);
         }
@@ -93,12 +116,13 @@ public class PostService {
     }
 
     // 스크랩 수("담긴순"/"스크랩순") 기준 정렬 — 실제 PostScrap 카운트로 메모리에서 정렬 후 직접 페이징
-    private Page<Post> getPostsSortedByScrapCount(Pageable pageable, String category) {
+    private Page<Post> getPostsSortedByScrapCount(Pageable pageable, String categoryCode, Long viewerId, boolean admin) {
         List<Post> all;
-        if (category == null || category.isBlank() || category.equalsIgnoreCase("all")) {
+        if (!admin) {
+            all = postRepository.findVisibleTo(viewerId, categoryCode, Pageable.unpaged()).getContent();
+        } else if (categoryCode == null) {
             all = postRepository.findByStatusInOrderByCreatedAtDesc(STATUS_VISIBLE, Pageable.unpaged()).getContent();
         } else {
-            String categoryCode = toCategoryCode(category);
             all = postRepository.findByStatusInAndCategoryOrderByCreatedAtDesc(
                     STATUS_VISIBLE, categoryCode, Pageable.unpaged()).getContent();
         }
@@ -188,10 +212,10 @@ public class PostService {
     }
 
     // 커뮤니티 - 게시글 상세 조회
+    // 숨김 글 상세는 작성자 · 관리자만 (예전에는 주소만 알면 누구나 본문을 받았다)
     @Transactional
-    public PostDetailResponseDto getPost(Long userId, Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+    public PostDetailResponseDto getPost(Long userId, Long postId, boolean admin) {
+        Post post = findVisiblePost(postId, userId, admin);
 
         post.increaseViewCount();
 
@@ -473,7 +497,8 @@ public class PostService {
     }
 
     // 커뮤니티 - 댓글 목록 조회
-    public List<PostDetailResponseDto.CommentInfo> getComments(Long postId) {
+    public List<PostDetailResponseDto.CommentInfo> getComments(Long postId, Long viewerId, boolean admin) {
+        findVisiblePost(postId, viewerId, admin);
         return postCommentRepository
                 .findByPostIdAndStatusInOrderByCreatedAtAsc(postId, List.of("ACTIVE","HIDDEN"), Pageable.unpaged())
                 .getContent()
@@ -532,7 +557,8 @@ public class PostService {
     }
 
     // 게시글별 장소 리뷰 목록 조회
-    public List<PlaceReviewResponseDto> getPlaceReviewsByPost(Long postId) {
+    public List<PlaceReviewResponseDto> getPlaceReviewsByPost(Long postId, Long viewerId, boolean admin) {
+        findVisiblePost(postId, viewerId, admin);
         return placeReviewRepository.findByPost_IdOrderByCreatedAtDesc(postId)
                 .stream()
                 .map(PlaceReviewResponseDto::from)

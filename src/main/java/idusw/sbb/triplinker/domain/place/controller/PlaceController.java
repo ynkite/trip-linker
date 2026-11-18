@@ -73,6 +73,7 @@ public class PlaceController {
     ) {
         List<Post> posts = placeReviewRepository.findPostsByPlaceId(placeId, PageRequest.of(page, size));
         List<PostListResponseDto> result = posts.stream()
+                .filter(p -> "ACTIVE".equals(p.getStatus())) // 숨김 · 삭제된 후기는 장소 화면에 안 나오게
                 .map(PostListResponseDto::from)
                 .toList();
 

@@ -66,4 +66,16 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             @Param("cat") String cat,
             Pageable pageable);
     // 여기까지
+
+    // 관리자가 아닌 사람에게 보여 줄 목록: 공개(ACTIVE) 글 + 자기가 쓴 숨김(HIDDEN) 글. viewerId 가 null 이면 ACTIVE 만.
+    // cat 이 null 이면 전체, 'ROUTE' 면 분류가 빈 글도 경로로 본다(위 findByStatusInAndCategory... 와 같은 규칙).
+    @Query("""
+        SELECT p FROM Post p LEFT JOIN p.user u
+        WHERE (p.status = 'ACTIVE' OR (p.status = 'HIDDEN' AND u.id = :viewerId))
+          AND (:cat IS NULL OR p.category = :cat OR (:cat = 'ROUTE' AND p.category IS NULL))
+        ORDER BY p.createdAt DESC""")
+    Page<Post> findVisibleTo(
+            @Param("viewerId") Long viewerId,
+            @Param("cat") String cat,
+            Pageable pageable);
 }
