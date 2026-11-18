@@ -1355,12 +1355,17 @@ function showSocialInfoEdit() {
     document.getElementById('info-edit-fields').innerHTML = buildEditHTML(_currentUser, true);
 }
 
+/** 비밀번호 확인을 10분에 10번 넘게 하면 서버가 429 와 안내를 준다 — 그 안내를 보여 준다 */
+function showPwLimitToast(res) {
+    if (res && res.message && res.message.indexOf('너무 많습니다') >= 0) toast('⚠️ ' + res.message);
+}
+
 /** POST /api/users/me/verify-password → 현재 비밀번호 서버 검증 */
 async function verifyInfoPw() {
     if (!_currentUser) { toast('로그인이 필요합니다'); return; }
     const pw = document.getElementById('infoPwInput').value;
     const res = await api.post('/api/users/me/verify-password', { password: pw });
-    if (!res.success) { document.getElementById('info-pw-err').style.display = 'block'; return; }
+    if (!res.success) { showPwLimitToast(res); document.getElementById('info-pw-err').style.display = 'block'; return; }
     document.getElementById('info-pw-step').style.display = 'none';
     document.getElementById('info-edit-form').style.display = 'block';
     document.getElementById('info-edit-fields').innerHTML = buildEditHTML(_currentUser, false);
@@ -1457,6 +1462,7 @@ async function doWithdraw() {
         if (!pw) { toast('비밀번호를 입력해주세요'); return; }
         const res = await api.post('/api/users/me/verify-password', { password: pw });
         if (!res.success) {
+            showPwLimitToast(res);
             if (errEl) errEl.style.display = 'block';
             return;
         }
