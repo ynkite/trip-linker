@@ -51,6 +51,9 @@ async function apiCall(path, opts = {}, retry = true) {
     const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
     const token = Token.getAccess();
     if (token) headers['Authorization'] = 'Bearer ' + token;
+    // 읽기 전용 공유 링크로 들어온 경우: 서버가 이 토큰으로 「이 여행을 읽어도 되는지」 를 확인한다
+    const shareTok = sessionStorage.getItem('shareToken');
+    if (shareTok) headers['X-Share-Token'] = shareTok;
 
     let res;
     try {
@@ -3269,6 +3272,23 @@ function setStars(btn, rating){ btn.closest('.star-sel').querySelectorAll('.star
 
 // ── [여행 플랜 공유 기능] ──
 
+/** 공유 링크 토큰 꼴: 「여행번호-서명」. 예전 꼴(번호 XOR 고정값 16진수)도 번호만은 읽어 둔다(로그인한 멤버용). */
+function parseShareTripId(tok) {
+    if (!tok) return null;
+    const dash = tok.indexOf('-');
+    if (dash > 0) return /^\d+$/.test(tok.slice(0, dash)) ? tok.slice(0, dash) : null;
+    try { return (BigInt('0x' + tok) ^ BigInt('0x5A3C9B7D2E')).toString(); } catch (e) { return null; }
+}
+
+/** 서버가 서명한 읽기 전용 링크를 받아 온다. 번호로 링크를 지어내면 서버가 거절한다. */
+const _shareLinkCache = {};
+async function fetchShareLink(tripId) {
+    if (_shareLinkCache[tripId]) return _shareLinkCache[tripId];
+    const res = await api.post(`/api/trips/${tripId}/share`, {});
+    if (!(res && res.success && res.data && res.data.token)) throw new Error('공유 링크를 만들 수 없습니다.');
+    return (_shareLinkCache[tripId] = `${window.location.origin}/plan/view?token=${res.data.token}`);
+}
+
 // 공유 모달 열기 및 데이터 로드
 function openShareModal() {
     const modal = document.getElementById('shareModal');
@@ -3278,9 +3298,8 @@ function openShareModal() {
     const linkEl = document.getElementById('share-link-val');
 
     if (linkEl && tripId) {
-        // 🎯 백엔드 규칙과 동일한 16진수 보안 암호화 규칙 적용하여 처음부터 난수로 표출
-        const obscureToken = (BigInt(tripId) ^ BigInt("0x5A3C9B7D2E")).toString(16);
-        linkEl.value = `${window.location.origin}/plan/view?token=${obscureToken}`;
+        linkEl.value = '';
+        fetchShareLink(tripId).then(url => { linkEl.value = url; }).catch(() => {});
     }
 
     modal.classList.add('open');
@@ -3288,7 +3307,7 @@ function openShareModal() {
 
 }
 
-function shareInviteToKakaoTalk() {
+async function shareInviteToKakaoTalk() {
     const tripId = window._currentTripId || sessionStorage.getItem('plannerDraftId');
     if (!tripId) { toast('⚠️ 여행 플랜 정보가 올바르지 않습니다.'); return; }
 
@@ -3297,20 +3316,10 @@ function shareInviteToKakaoTalk() {
             Kakao.init('50a304fa42a0bd2d294ac871e3acae14');
         }
 
-        // 백엔드 규칙과 동일한 16진수 난수 토큰 암호화 처리
-        let obscureToken;
-        try {
-            const bigTripId = BigInt(tripId);
-            const mask = BigInt("0x5A3C9B7D2E");
-            const obscure = bigTripId ^ mask;
-            obscureToken = obscure.toString(16);
-        } catch (e) {
-            console.error("카카오 토큰 암호화 실패:", e);
-            obscureToken = parseInt(tripId).toString(16);
-        }
-
-        // 🎯 [동적 주소 연동]: 현재 접속 환경에 맞춰 자동으로 링크를 생성
-        const inviteUrl = `${window.location.origin}/plan/view?token=${obscureToken}`;
+        // 서버가 서명한 읽기 전용 링크 (공유 모달을 열 때 받아 둔 것이 있으면 그대로 씀)
+        let inviteUrl;
+        try { inviteUrl = await fetchShareLink(tripId); }
+        catch (e) { toast('⚠️ 공유 링크를 만들 수 없습니다.'); return; }
 
         // v2 공식 규격: 이 함수를 실행하면 카카오 서버가 알아서 로그인 세션을 검증하고 단톡방/친구 선택 창(피커)을 자동으로 띄워줍니다.
         Kakao.Share.sendDefault({
@@ -3343,9 +3352,8 @@ async function loadShareMembersData() {
         return;
     }
 
-    // 🎯 화면 로드 시에도 링크 창에 완벽한 난수 주소가 유지되도록 체결
-    const obscureToken = (BigInt(tripId) ^ BigInt("0x5A3C9B7D2E")).toString(16);
-    if(linkEl) linkEl.value = `${window.location.origin}/plan/view?token=${obscureToken}`;
+    // 링크 창에는 서버가 서명한 읽기 전용 링크
+    if (linkEl) fetchShareLink(tripId).then(url => { linkEl.value = url; }).catch(() => {});
     if(listEl) listEl.innerHTML = '<div style="font-size:13px; color:var(--text3);">참여자 목록 불러오는 중...</div>';
 
     try {
@@ -3462,14 +3470,8 @@ async function copyShareLink() {
     } catch (error) {
         console.error("공유 링크 생성 실패:", error);
 
-        const fallbackObscure = (tripId ^ 0x5A3C9B7D2E).toString(16);
-        const fallbackLink = `${window.location.origin}/plan/view?token=${fallbackObscure}`;
-
-        const linkEl = document.getElementById('share-link-val');
-        if (linkEl) linkEl.value = fallbackLink;
-
-        await copyToClipboard(fallbackLink);
-        toast('링크가 복사되었습니다.');
+        // 예전에는 여기서 번호로 링크를 지어냈다 — 그 링크는 이제 서버가 거절하므로 실패를 그대로 알린다
+        toast('⚠️ 공유 링크를 만들지 못했습니다. 잠시 뒤 다시 눌러 주세요.');
     }
 }
 
@@ -4066,13 +4068,10 @@ window.addEventListener('popstate', async e => {
     // 난수 토큰이 존재하면 역으로 디코딩하여 원본 숫자로 복원
     let sharedId = null;
     if (shareToken) {
-        try {
-            // 16진수 난수를 다시 원본 숫자 ID로 안전하게 역연산 해독
-            const parsedHex = parseInt(shareToken, 16);
-            sharedId = (parsedHex ^ 0x5A3C9B7D2E).toString();
-        } catch (e) {
-            console.error("유효하지 않은 토큰 포맷입니다.");
-        }
+        sharedId = parseShareTripId(shareToken);
+        // 로그인 없이 읽을 때 서버에 같이 보낼 토큰 (apiCall 이 X-Share-Token 머리글로 붙임)
+        sessionStorage.setItem('shareToken', shareToken);
+        if (!sharedId) console.error("유효하지 않은 토큰 포맷입니다.");
     }
 
     // 🔒 공유 링크(?token=난수값)로 접속했는데, 읽기전용(/plan/view)이 아닌 편집링크(/plan)이고 토큰도 없다면?

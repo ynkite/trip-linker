@@ -5,6 +5,7 @@ import idusw.sbb.triplinker.domain.plan.dto.PlanCreateDto;
 import idusw.sbb.triplinker.domain.plan.dto.PlanDetailResponseDto;
 import idusw.sbb.triplinker.domain.plan.dto.PlanInputFormSaveDto;
 import idusw.sbb.triplinker.domain.plan.service.TravelPlanService;
+import idusw.sbb.triplinker.domain.plan.service.TripReadGuard;
 import idusw.sbb.triplinker.global.common.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class TravelPlanController {
 
     private final TravelPlanService travelPlanService;
+    private final TripReadGuard tripReadGuard;   // 로그인 없이 여는 읽기: 주인 · 멤버 · 공유 토큰 · 공개 후기의 원본만
 
     @PostMapping
     public ResponseEntity<ApiResponse<Map<String, Long>>> createPlan(
@@ -65,8 +67,10 @@ public class TravelPlanController {
     @GetMapping("/{tripId}/input-form")
     public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getInputForm(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long tripId) {
+            @PathVariable Long tripId,
+            @RequestHeader(value = TripReadGuard.HEADER, required = false) String shareToken) {
 
+        tripReadGuard.requireReader(tripId, userDetails != null ? userDetails.getUserId() : null, shareToken);
         java.util.Map<String, Object> data = travelPlanService.getInputFormMap(tripId);
         return ResponseEntity.ok(ApiResponse.success(data));
     }
@@ -81,10 +85,12 @@ public class TravelPlanController {
     @GetMapping("/{tripId}")
     public ResponseEntity<ApiResponse<PlanDetailResponseDto>> getPlanDetail(
             @AuthenticationPrincipal CustomUserDetails userDetails,  // ← 수정
-            @PathVariable Long tripId) {
+            @PathVariable Long tripId,
+            @RequestHeader(value = TripReadGuard.HEADER, required = false) String shareToken) {
 
         // 비회원(userDetails == null)일 때 에러가 나지 않도록 방어 로직 추가
         Long userId = (userDetails != null) ? userDetails.getUserId() : null;
+        tripReadGuard.requireReader(tripId, userId, shareToken);
         PlanDetailResponseDto detail = travelPlanService.getPlanDetail(userId, tripId);  // ← 수정
         return ResponseEntity.ok(ApiResponse.success(detail));
     }

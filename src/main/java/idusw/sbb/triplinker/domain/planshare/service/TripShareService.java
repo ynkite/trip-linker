@@ -34,6 +34,7 @@ public class TripShareService {
 
     // 멤버 목록(이메일)은 멤버만, 초대는 주인 · 편집자만 (전에는 로그인한 누구나 자기를 남의 여행 편집자로 넣을 수 있었다)
     private final TripAccessGuard tripAccessGuard;
+    private final ShareTokenService shareTokenService;
 
     // 멤버 목록 조회
     public List<TripMemberResponseDto> getMembers(Long userId, Long tripId) {
@@ -114,31 +115,19 @@ public class TripShareService {
     @Transactional
     public Map<String, String> generateShareLink(Long userId, Long tripId) {
         tripAccessGuard.requireMember(tripId, userId);
-        String hexToken;
-        try {
-            long obscure = tripId ^ 0x5A3C9B7D2EL; // 비트 마스킹으로 숫자 완전 변형
-            hexToken = Long.toHexString(obscure);
-        } catch (Exception e) {
-            hexToken = String.valueOf(tripId);
-        }
+        // 예전: 번호 XOR 고정값(화면 JS 로 거꾸로 풀림) → 지금: 번호-서명(서버 비밀 값 HMAC)
+        String token = shareTokenService.tokenFor(tripId);
 
-        //난수 주소 생성
         String currentHost = getDynamicHost();
-        String readOnlyLink = currentHost + "/plan/view?token=" + hexToken;
-        return Map.of("shareLink", readOnlyLink);
+        String readOnlyLink = currentHost + "/plan/view?token=" + token;
+        return Map.of("shareLink", readOnlyLink, "token", token);
     }
 
 
     // 초대 이메일 내용 구성 및 발송 로직
     private void sendInviteEmail(String email, String name, String planTitle, Long tripId) {
-        String hexToken;
-        try {
-            // 주소창/공유모달과 완벽하게 동일한 16진수 비트 연산 암호화 처리
-            long obscure = tripId ^ 0x5A3C9B7D2EL;
-            hexToken = Long.toHexString(obscure);
-        } catch (Exception e) {
-            hexToken = String.valueOf(tripId);
-        }
+        // 편집 초대 링크도 공유 링크와 같은 서명 토큰 (받는 사람은 로그인 뒤 멤버로 들어온다)
+        String hexToken = shareTokenService.tokenFor(tripId);
 
         // 편집 링크 주소 뒤에 id=숫자 대신 token=난수 형태로 암호화하여 발송
         String currentHost = getDynamicHost();

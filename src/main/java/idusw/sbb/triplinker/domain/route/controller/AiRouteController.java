@@ -2,6 +2,7 @@ package idusw.sbb.triplinker.domain.route.controller;
 
 import idusw.sbb.triplinker.domain.auth.security.CustomUserDetails;
 import idusw.sbb.triplinker.domain.plan.service.TripAccessGuard;
+import idusw.sbb.triplinker.domain.plan.service.TripReadGuard;
 import idusw.sbb.triplinker.domain.route.service.AiRouteService;
 import idusw.sbb.triplinker.domain.route.service.DemoRouteService;
 import idusw.sbb.triplinker.global.common.ApiResponse;
@@ -19,6 +20,7 @@ public class AiRouteController {
     private final DemoRouteService demoRouteService;
     // 일정을 바꾸거나 AI 를 부르는 주소는 그 여행의 주인 · 편집자만 (조회 GET 은 공유 링크라 그대로 공개)
     private final TripAccessGuard tripAccessGuard;
+    private final TripReadGuard tripReadGuard;
 
     private void requireEditor(Long tripId, CustomUserDetails user) {
         tripAccessGuard.requireEditor(tripId, user != null ? user.getUserId() : null);
@@ -65,7 +67,12 @@ public class AiRouteController {
 
     // 컨트롤러에 추가해야 할 GET 매핑 (데이터 반환용)
     @GetMapping("")
-    public ResponseEntity<ApiResponse<Object>> getRoutes(@PathVariable Long tripId) {
+    public ResponseEntity<ApiResponse<Object>> getRoutes(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable Long tripId,
+            @RequestHeader(value = TripReadGuard.HEADER, required = false) String shareToken) {
+        // 공유 링크로 로그인 없이 열 수 있게 열어 둔 주소 — 번호만 바꿔 남의 일정을 읽지 못하게 토큰을 본다
+        tripReadGuard.requireReader(tripId, user != null ? user.getUserId() : null, shareToken);
         // routeService -> aiRouteService 로 수정
         return ResponseEntity.ok(ApiResponse.success(aiRouteService.getRoutesByTripId(tripId)));
     }

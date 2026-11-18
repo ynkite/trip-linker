@@ -15,6 +15,12 @@ import idusw.sbb.triplinker.domain.plan.repository.PlanInputFormRepository;
 import idusw.sbb.triplinker.domain.plan.repository.TravelPlanRepository;
 import idusw.sbb.triplinker.domain.plan.service.TravelPlanServiceImpl;
 import idusw.sbb.triplinker.domain.plan.service.TripAccessGuard;
+import idusw.sbb.triplinker.domain.plan.service.TripReadGuard;
+import idusw.sbb.triplinker.domain.planshare.service.ShareTokenService;
+import idusw.sbb.triplinker.domain.post.entity.Post;
+import idusw.sbb.triplinker.domain.post.repository.PostRepository;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
 import idusw.sbb.triplinker.domain.planshare.controller.TripShareController;
 import idusw.sbb.triplinker.domain.planshare.entity.PlanRole;
 import idusw.sbb.triplinker.domain.planshare.repository.TripMemberRepository;
@@ -71,6 +77,8 @@ class AccessControlTest {
     ChatModel claude, groq, gemini;
     UserService userService;
     BudgetEstimateService budgetEstimateService;
+    ShareTokenService shareTokens;
+    PostRepository postRepo;
     MockMvc mvc;
 
     @BeforeEach
@@ -119,11 +127,15 @@ class AccessControlTest {
         });
 
         TripAccessGuard guard = new TripAccessGuard(planRepo, memberRepo);
+        shareTokens = new ShareTokenService("test-secret");
+        postRepo = mock(PostRepository.class);
+        when(postRepo.findByPlanIdAndStatusOrderByCreatedAtDesc(anyLong(), anyString(), any())).thenReturn(Page.empty());
+        TripReadGuard readGuard = new TripReadGuard(planRepo, memberRepo, shareTokens, postRepo);
         mvc = MockMvcBuilders.standaloneSetup(
                         new ExpenseController(new ExpenseService(expenseRepo, planRepo, guard)),
-                        new AiRouteController(aiRouteService, demoRouteService, guard),
-                        new TripShareController(new TripShareService(memberRepo, planRepo, userRepo, mock(JavaMailSender.class), guard)),
-                        new TravelPlanController(new TravelPlanServiceImpl(planRepo, formRepo, userRepo, expenseRepo, memberRepo, guard)),
+                        new AiRouteController(aiRouteService, demoRouteService, guard, readGuard),
+                        new TripShareController(new TripShareService(memberRepo, planRepo, userRepo, mock(JavaMailSender.class), guard, shareTokens)),
+                        new TravelPlanController(new TravelPlanServiceImpl(planRepo, formRepo, userRepo, expenseRepo, memberRepo, guard), readGuard),
                         new ChatbotController(new ChatbotServiceImpl(sessionRepo, messageRepo, planRepo, guard, claude, groq, gemini)),
                         new UserController(userService, null),
                         new BudgetEstimateController(budgetEstimateService, guard))
@@ -255,9 +267,68 @@ class AccessControlTest {
         @DisplayName("정상: 공유 링크 — 로그인 없이도 일정 · 여행 정보 · 인원 정보를 읽는다")
         void anonymousCanReadSharedTrip() throws Exception {
             loginAs(null);
+            String tok = shareTokens.tokenFor(TRIP);   // 주인이 「공유」 를 눌러 받은 링크의 토큰
+            mvc.perform(get("/api/trips/10/routes").header("X-Share-Token", tok)).andExpect(status().isOk());
+            mvc.perform(get("/api/trips/10").header("X-Share-Token", tok)).andExpect(status().isOk());
+            mvc.perform(get("/api/trips/10/input-form").header("X-Share-Token", tok)).andExpect(status().isOk());
+        }
+    }
+
+    // ───────────────────────── 로그인 없는 읽기 (공유 링크) ─────────────────────────
+    // 대표 선택 5번: 경로 조회가 로그인 없이 열려 있어 여행 번호만 바꿔 모든 회원의 일정 · 예산 · 출발지를 읽을 수 있던 것
+    @Nested
+    class PublicRead {
+        @Test
+        @DisplayName("로그인 없이 여행 번호만으로는 일정 · 여행 정보 · 인원 정보를 못 읽는다")
+        void anonymousWithoutTokenCannotRead() throws Exception {
+            loginAs(null);
+            mvc.perform(get("/api/trips/10/routes")).andExpect(status().isForbidden());
+            mvc.perform(get("/api/trips/10")).andExpect(status().isForbidden());
+            mvc.perform(get("/api/trips/10/input-form")).andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("로그인한 다른 회원도 멤버가 아니면 번호만 바꿔 남의 일정을 못 읽는다")
+        void otherUserCannotReadByNumber() throws Exception {
+            loginAs(OTHER);
+            mvc.perform(get("/api/trips/10/routes")).andExpect(status().isForbidden());
+            mvc.perform(get("/api/trips/10")).andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("예전 공유 토큰(번호 XOR 고정값 — 화면 JS 로 거꾸로 풀림)으로는 못 읽는다")
+        void legacyGuessableTokenRejected() throws Exception {
+            loginAs(null);
+            String legacy = Long.toHexString(TRIP ^ 0x5A3C9B7D2EL);
+            mvc.perform(get("/api/trips/10/routes").header("X-Share-Token", legacy)).andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("다른 여행의 공유 토큰을 번호만 바꿔 붙여도 못 읽는다")
+        void tokenOfOtherTripRejected() throws Exception {
+            loginAs(null);
+            String forged = TRIP + shareTokens.tokenFor(OTHER_TRIP).substring(String.valueOf(OTHER_TRIP).length());
+            mvc.perform(get("/api/trips/10/routes").header("X-Share-Token", forged)).andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("정상: 주인 · 초대된 멤버는 토큰 없이 읽는다")
+        void ownerAndMemberRead() throws Exception {
+            loginAs(OWNER);
             mvc.perform(get("/api/trips/10/routes")).andExpect(status().isOk());
+            loginAs(EDITOR);
             mvc.perform(get("/api/trips/10")).andExpect(status().isOk());
-            mvc.perform(get("/api/trips/10/input-form")).andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("정상: 커뮤니티에 공개된 후기 글의 원본 일정은 누구나 읽는다(후기 화면이 원본 일정을 보여 줌)")
+        void sourcePlanOfPublicPostIsReadable() throws Exception {
+            when(postRepo.findByPlanIdAndStatusOrderByCreatedAtDesc(eq(TRIP), eq("ACTIVE"), any()))
+                    .thenReturn(new PageImpl<>(List.of(mock(Post.class))));
+            loginAs(OTHER);
+            mvc.perform(get("/api/trips/10")).andExpect(status().isOk());
+            loginAs(null);
+            mvc.perform(get("/api/trips/10/routes")).andExpect(status().isOk());
         }
     }
 
