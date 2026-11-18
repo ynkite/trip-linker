@@ -47,7 +47,7 @@ class DemoSeedRouteTest {
     }
 
     @Test
-    @DisplayName("하루 4~6곳, 시간이 차례로 가고, 식당이 연달아 둘 오지 않으며, 숙소는 그날 마지막에만")
+    @DisplayName("하루 4~6곳, 시간이 차례로 가고, 식당이 연달아 둘 오지 않으며, 숙소는 묵는 날 마지막과 다음 날 처음에만")
     void dayShape() {
         for (DemoSeedData.Trip trip : DemoSeedData.TRIPS) {
             for (int d = 0; d < trip.days().size(); d++) {
@@ -59,10 +59,18 @@ class DemoSeedRouteTest {
                             .as(where + " 시간 순서").isBefore(LocalTime.parse(s.get(i + 1).time()));
                     assertThat("food".equals(s.get(i).type()) && "food".equals(s.get(i + 1).type()))
                             .as(where + " 식당 연달아 " + s.get(i).name()).isFalse();
-                    assertThat(s.get(i).type()).as(where + " 숙소는 마지막에만").isNotEqualTo("stay");
+                    if (i > 0) assertThat(s.get(i).type()).as(where + " 숙소는 처음과 마지막에만").isNotEqualTo("stay");
                 }
                 assertThat(s).as(where + " 관광지만 있는 날").anyMatch(x -> !"tour".equals(x.type()));
                 boolean lastDay = d == trip.days().size() - 1;
+                if (d > 0) {
+                    List<DemoSeedData.Stop> prev = trip.days().get(d - 1).stops();
+                    assertThat(s.get(0)).as(where + " 전날 숙소에서 시작")
+                            .extracting(DemoSeedData.Stop::type, DemoSeedData.Stop::name)
+                            .containsExactly("stay", prev.get(prev.size() - 1).name());
+                } else {
+                    assertThat(s.get(0).type()).as(where + " 첫날은 숙소로 시작하지 않음").isNotEqualTo("stay");
+                }
                 if (!lastDay) {
                     assertThat(s.get(s.size() - 1).type()).as(where + " 묵는 날은 숙소로 끝남").isEqualTo("stay");
                 }

@@ -170,7 +170,7 @@ class DemoSeedServiceJpaTest {
                 values.add(ratingOf(stars));
             });
         }
-        assertThat(values).hasSize(10).allMatch(v -> v >= 3.0 && v <= 5.0);
+        assertThat(values).hasSize(11).allMatch(v -> v >= 3.0 && v <= 5.0);
         assertThat(new HashSet<>(values)).hasSizeGreaterThanOrEqualTo(2);
         assertThat(values).noneMatch(v -> v == 5.0);
     }
