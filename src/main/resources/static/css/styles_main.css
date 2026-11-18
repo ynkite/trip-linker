@@ -29,12 +29,13 @@
     --cream: #F5F0E8;
     --cream2: #EDE8DF;
     --warm: #C4763A;
+    --warm-ink: #9A5822; /* 황토색 작은 글씨용 — 흰 바탕 대비 5.5:1 (#C4763A 는 3.5:1 로 Lighthouse 대비 항목 실패) */
     --warm-pale: #FBF0E6;
     --coral: #E87060;
     --sky: #5B9BD5;
     --text1: #1C2B2A;
     --text2: #4A5E5C;
-    --text3: #8FA3A0;
+    --text3: #586E6B; /* 흰 바탕 대비 5.4:1 (전 #8FA3A0 은 2.6:1 로 Lighthouse 대비 항목 실패) */
     --text: #1C2B2A;
     --surface: #FFFFFF;
     --border: #D8E6E3;
@@ -180,6 +181,22 @@ nav {
     cursor: pointer;
     transition: all .18s;
     white-space: nowrap
+}
+
+/* 머리 줄 단추(관리자 · 이름 · 로그아웃)를 같은 높이 · 같은 글자로.
+   「관리자」 는 <a> 라서 줄 높이가 단추와 달라 옆 단추보다 작아 보이던 것 */
+.nav-btns .btn-o,
+.nav-btns .btn-f {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 32px;
+    line-height: 1;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none
 }
 
 .btn-f:hover {
@@ -596,7 +613,7 @@ nav {
 .sec-ey {
     font-size: 11px;
     font-weight: 700;
-    color: var(--warm);
+    color: var(--warm-ink);
     letter-spacing: 1.2px;
     text-transform: uppercase;
     margin-bottom: 5px
@@ -689,35 +706,63 @@ nav {
 }
 
 .hsc-ey {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: var(--sage-pale);
-    border: 1px solid var(--sage-l);
+    /* 테두리 알약(✦ AI 기반 …) 대신 조용한 작은 글 */
+    display: block;
     color: var(--sage-d);
-    padding: 4px 11px;
-    border-radius: 20px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
-    margin-bottom: 12px
+    letter-spacing: .02em;
+    margin: 0 0 8px
 }
 
 .hsc-ttl {
     font-family: 'Gmarket Sans', sans-serif;
-    font-size: 34px;
+    font-size: 36px;
     font-weight: 700;
     color: var(--text);
     line-height: 1.15;
-    margin-bottom: 5px;
+    margin: 0 0 8px;
     letter-spacing: -.8px
 }
 
 .hsc-sub {
-    font-size: 13px;
-    color: var(--text3);
-    margin-bottom: 18px;
-    line-height: 1.6
+    font-size: 14px;
+    color: var(--text2);
+    margin: 0 0 20px;
+    line-height: 1.6;
+    word-break: keep-all
 }
+
+/* 기능 소개 — 카드 틀 없이 한 줄씩 (제목 칸 너비를 맞춰 줄을 세움) */
+.hsc-feats {
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--border2);
+    display: grid;
+    gap: 7px
+}
+.hsc-feats li {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text2)
+}
+.hsc-feats b {
+    font-weight: 700;
+    color: var(--text)
+}
+
+.hsc-go.hsc-go-main {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    border-radius: var(--r)
+}
+.hsc-go.hsc-go-main:focus-visible { outline: 3px solid var(--sage-l); outline-offset: 2px }
 
 .hsc-search {
     display: flex;
@@ -775,7 +820,7 @@ nav {
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
-    margin-bottom: 18px
+    margin-bottom: 16px
 }
 
 .hsc-lbl {
@@ -805,41 +850,16 @@ nav {
     background: var(--sage-pale)
 }
 
-.hsc-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px
-}
-
-.hsc-card {
-    background: var(--cream);
-    border-radius: 11px;
-    padding: 11px 10px;
-    border: 1px solid var(--border2);
-    transition: all .2s
-}
-
-.hsc-card:hover {
-    border-color: var(--sage-l);
-    background: var(--sage-pale)
-}
-
-.hsc-ci {
-    font-size: 19px;
-    margin-bottom: 5px
-}
-
-.hsc-ct {
-    font-size: 11px;
+/* 큐레이션 카드의 배지 · 태그 — 알약 대신 조용한 글자 */
+.cur-badge {
+    font-size: 12px;
     font-weight: 700;
-    color: var(--text);
-    margin-bottom: 2px
+    color: var(--sage-d)
 }
-
-.hsc-cd {
-    font-size: 10px;
-    color: var(--text3);
-    line-height: 1.4
+.cur-tags {
+    font-size: 12.5px;
+    color: var(--text2);
+    margin-bottom: 12px
 }
 
 /* ── curation slider ── */
@@ -940,19 +960,19 @@ nav {
 }
 
 .btn-slide-prev {
-    padding: 10px 20px;
+    padding: 10px 18px;
     border-radius: 12px;
     font-size: 13px;
     font-weight: 700;
     background: #fff;
     color: var(--sage-d);
-    border: none;
+    border: 1px solid var(--border2);
     cursor: pointer;
     transition: all .18s;
     display: flex;
     align-items: center;
     gap: 5px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, .15)
+    box-shadow: none
 }
 
 .btn-slide-prev:hover {
@@ -967,10 +987,10 @@ nav {
     font-weight: 700;
     background: var(--sage);
     color: #fff;
-    border: none;
+    border: 1px solid var(--sage);
     cursor: pointer;
     transition: all .18s;
-    box-shadow: 0 3px 10px rgba(30, 122, 105, .22)
+    box-shadow: none
 }
 
 .btn-slide-plan:hover {
@@ -1097,6 +1117,9 @@ nav {
     cursor: pointer;
     transition: all .22s;
     overflow: hidden;
+    /* 제목이 한 줄인 카드도 아래 줄(좋아요 · 스크랩)이 옆 카드와 같은 높이에 오게 */
+    display: flex;
+    flex-direction: column;
 }
 
 .top3-card:hover {
@@ -1112,7 +1135,7 @@ nav {
     margin-right: -18px !important;
 
     /* 배너 내부의 여백 조절 (높이가 너무 비대해지지 않도록 상하 패딩을 슬림하게 조정) */
-    padding: 12px 18px;
+    padding: 9px 18px;
 
     background: linear-gradient(135deg, #1060a8, #4090d8);
     /* 그라데이션 배너 배경색 */
@@ -1120,7 +1143,7 @@ nav {
     /* 글자색 흰색 */
     text-align: left;
 
-    font-size: 42px;
+    font-size: 22px;
     /* 카드가 작아진 만큼 숫자 크기도 살짝 밸런스를 맞춤 */
     font-weight: 900;
     line-height: 1;
@@ -1159,7 +1182,7 @@ nav {
 .pvb-label {
     font-size: 11px;
     font-weight: 700;
-    color: var(--sage);
+    color: var(--sage-d);
     margin-bottom: 2px;
     display: flex;
     align-items: center;
@@ -1180,7 +1203,8 @@ nav {
     align-items: center;
     justify-content: space-between;
     flex-wrap: nowrap;
-    gap: 6px
+    gap: 6px;
+    margin-top: auto
 }
 
 .card-stats {
@@ -1199,7 +1223,7 @@ nav {
 
 .card-scrap-n {
     font-size: 11px;
-    color: var(--warm);
+    color: var(--warm-ink);
     font-weight: 700;
     white-space: nowrap
 }
@@ -1341,7 +1365,7 @@ nav {
 }
 
 .pop-scrap-n {
-    color: var(--warm);
+    color: var(--warm-ink);
     font-size: 11px;
     font-weight: 700;
     white-space: nowrap
@@ -3273,7 +3297,7 @@ nav {
     gap: 5px;
     font-size: 12px;
     font-weight: 700;
-    color: var(--warm);
+    color: var(--warm-ink);
     margin-bottom: 3px
 }
 
@@ -3796,7 +3820,7 @@ nav {
 }
 
 .pc-scrap-n {
-    color: var(--warm);
+    color: var(--warm-ink);
     font-weight: 700;
     white-space: nowrap
 }
@@ -4435,7 +4459,7 @@ nav {
     padding: 2px 7px;
     border-radius: 10px;
     background: #F0CBA8;
-    color: var(--warm)
+    color: var(--warm-ink)
 }
 
 .member-role {
