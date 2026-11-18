@@ -14,6 +14,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -34,6 +36,29 @@ public class SecurityConfig {
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
 
+    // 카메라 · 마이크 · 위치 · 결제를 쓰지 않으므로 모두 끈다 (화면 코드에 geolocation 호출 0건)
+    static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
+
+    // 바로 적용하는 CSP — 화면을 깨뜨릴 수 없는 항목만: 플러그인(object) 금지, <base> 바꿔치기 금지, 다른 사이트의 iframe 안에 넣기 금지
+    static final String CSP_ENFORCED = "object-src 'none'; base-uri 'self'; frame-ancestors 'self'";
+
+    // 전체 CSP 는 먼저 Report-Only(위반을 막지 않고 브라우저 콘솔에만 알림)로 둔다.
+    // 화면이 onclick 같은 인라인 스크립트를 수백 곳에서 써서 'unsafe-inline' 을 아직 뺄 수 없고,
+    // 카카오 지도 SDK 가 키에 따라 받는 주소(t1.daumcdn.net, 지도 타일 등)를 운영 키로 직접 확인하지 못했다.
+    // 운영에서 콘솔 위반이 0 이면 이름을 Content-Security-Policy 로 바꿔 적용한다.
+    static final String CSP_REPORT_ONLY = String.join("; ",
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' https://dapi.kakao.com https://t1.daumcdn.net https://t1.kakaocdn.net https://cdnjs.cloudflare.com",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' data: https://fonts.gstatic.com",
+            "img-src 'self' data: blob: https:",
+            "connect-src 'self' https://dapi.kakao.com https://*.kakao.com https://*.daumcdn.net",
+            "frame-src 'self' https://*.kakao.com",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "frame-ancestors 'self'",
+            "form-action 'self'");
+
     //비밀번호 암호화 도구 등록
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -53,7 +78,8 @@ public class SecurityConfig {
                 // API URL 주소별 접근 권한 나누기
                 .authorizeHttpRequests(auth -> auth
                         //정적 리소스 (CSS, JS, 이미지 등) 전체 허용
-                        .requestMatchers("/**.css", "/**/*.css", "/**.js", "/**/*.js", "/**.html", "/**.ico", "img/**.png", "/**.jpg", "/**.svg", "/**.woff2", "/**.woff", "/**.ttf", "/plan/**", "/plan/view/**").permitAll()
+                        // (전에는 "/**.css" 같은 꼴이라 스프링 경로 규칙에 맞지 않아 시험 문맥에서 설정이 뜨지 않았다. 실제 폴더 기준으로 다시 적음)
+                        .requestMatchers("/css/**", "/js/**", "/img/**", "/favicon.ico", "/robots.txt", "/plan", "/plan/**").permitAll()
 
                         // 업로드된 이미지 파일 비로그인 접근 허용
                         .requestMatchers("/uploads/**").permitAll()
@@ -70,6 +96,7 @@ public class SecurityConfig {
                                 "/api/auth/verify-email",           //이메일 인증 확인
                                 "/api/auth/password/reset-request", //비밀번호 재설정 요청
                                 "/api/auth/password/reset",         //비밀번호 재설정 처리
+                                "/api/auth/refresh",                //토큰 재발급 (접속 토큰이 만료된 뒤에 부르므로 재발급 토큰 자체로 확인)
                                 "/api/maps/weather",
                                 "/oauth2/authorization/**",         //소셜 로그인 요청
                                 "/login/oauth2/code/**"             //소셜 로그인 콜백
@@ -95,8 +122,7 @@ public class SecurityConfig {
                         // 관리자 전용 기능
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // API 명세서(Swagger) 접근 허용(개발 시 편하게 확인 가능)
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // (Swagger 허용 줄은 뺐다 — springdoc 의존성이 없어 열려 있던 주소가 아무 데도 쓰이지 않았다)
 
                         // 그 외의 모든 API 요청은 반드시 인증(JWT 유효성 검증) 필요
                         .anyRequest().authenticated()
@@ -108,6 +134,14 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler)
+                )
+
+                // 보안 응답 헤더 (Mozilla Observatory 에서 걸린 CSP · Referrer-Policy · Permissions-Policy)
+                .headers(h -> h
+                        .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", PERMISSIONS_POLICY))
+                        .addHeaderWriter(new StaticHeadersWriter("Content-Security-Policy", CSP_ENFORCED))
+                        .addHeaderWriter(new StaticHeadersWriter("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY))
                 )
 
                 // Spring Security의 기본 인증 필터가 동작하기 전에, 커스텀 JWT 필터가 먼저 토큰을 검증하도록 설정
@@ -131,8 +165,9 @@ public class SecurityConfig {
 
         //프론트엔드에서 응답 헤더에 담긴 'Authorization' 값을 읽을 수 있도록 노출 설정
         configuration.addExposedHeader("Authorization");
-        //인증 정보(쿠키, 토큰 등)를 포함한 요청을 허용
-        configuration.setAllowCredentials(true);
+        // 인증 정보(쿠키) 포함 요청은 허용하지 않는다. 로그인은 Authorization 헤더로 하므로 필요 없고,
+        // 「모든 출처 + credentials 허용」 은 점검 도구가 늘 위험으로 거는 조합이다. (같은 도메인 화면에는 영향 없음)
+        configuration.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         //애플리케이션의 모든 엔드포인트("/**")에 위에서 정의한 CORS 정책 적용
