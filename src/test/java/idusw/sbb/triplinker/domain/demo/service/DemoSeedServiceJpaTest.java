@@ -99,7 +99,7 @@ class DemoSeedServiceJpaTest {
     }
 
     private TravelPlan plan(String destination) {
-        return plans().stream().filter(p -> destination.equals(p.getDestination())).findFirst().orElseThrow();
+        return plans().stream().filter(p -> p.getDestination().split(" ")[0].equals(destination)).findFirst().orElseThrow();
     }
 
     /** 경로 JSON 의 날짜별 [장소 이름 → 평점 글]. 이동 줄은 뺀다. */
@@ -132,7 +132,7 @@ class DemoSeedServiceJpaTest {
         List<TravelPlan> plans = plans();
         assertThat(plans).hasSize(4);
         assertThat(plans).extracting(TravelPlan::getDestination)
-                .containsExactlyInAnyOrder("부산", "속초", "대구", "대전");
+                .containsExactlyInAnyOrder("부산", "속초", "대구 중구", "대전 중구");
         assertThat(plans).allMatch(p -> "FIXED".equals(p.getStatus()) && p.getForm() != null);
         // 지난 여행과 다가오는 여행이 섞여 있다
         assertThat(plans).anyMatch(p -> p.getEndDate().isBefore(TODAY));
@@ -174,6 +174,17 @@ class DemoSeedServiceJpaTest {
                     "SELECT m.role FROM ChatMessage m WHERE m.chatSession.id = :sid ORDER BY m.id", String.class)
                     .setParameter("sid", sessions.get(0).getId()).getResultList();
             assertThat(roles).as(dest).hasSizeGreaterThanOrEqualTo(4).startsWith("USER", "AI");
+        }
+    }
+
+    @Test
+    @DisplayName("다가오는 일정은 출발지 · 여행지가 「시/도 시/군/구」 꼴이라 다시 열어도 플래너 1단계를 넘어간다")
+    void upcomingTripsHaveDistricts() {
+        seedService.reset(demo.getId(), TODAY);
+        for (TravelPlan p : plans()) {
+            if (!p.getStartDate().isAfter(TODAY)) continue;
+            assertThat(p.getDestination()).as(p.getTitle() + " 여행지").matches("[^ ]+ [^ ]+");
+            assertThat(p.getForm().getDeparture()).as(p.getTitle() + " 출발지").matches("[^ ]+ [^ ]+");
         }
     }
 

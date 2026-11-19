@@ -218,7 +218,7 @@ public class DemoSeedService {
             PlanInputForm form = PlanInputForm.builder()
                     .plan(plan)
                     .user(user)
-                    .departure("서울")
+                    .departure("서울 중구")   // 플래너가 저장하는 꼴(시/도 시/군/구). 「서울」 만 있으면 다시 열 때 1단계에서 막힘
                     .transportType(trip.transport())
                     .accommodationType(trip.days().size() > 1 ? "호텔" : null)
                     .companionType(trip.companion())
