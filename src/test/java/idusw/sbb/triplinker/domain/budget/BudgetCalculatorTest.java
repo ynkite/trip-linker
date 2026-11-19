@@ -233,17 +233,20 @@ class BudgetCalculatorTest {
     }
 
     @Test
-    @DisplayName("키 없음 — 숙박 · 입장료 미산정(0원 · 임의 범위로 메우지 않음), 안내에 TOUR_API_KEY, 신뢰도 낮음")
+    @DisplayName("키 없음 — 숙박 · 입장료 미산정(0원 · 임의 범위로 메우지 않음), 안내는 쉬운 말(설정 이름은 화면에 안 냄), 신뢰도 낮음")
     void noKeyFallsBackToAssumption() {
         Input in = new Input("제주", null, 2, 3, 2, true, null, List.of(), 3, 40, 0, 4, 300_000L, false);
         BudgetEstimate e = BudgetCalculator.compute(in);
         Item stay = byLabel(e, "숙박");
         assertEquals(Source.NOT_ESTIMATED, stay.source());
         assertEquals(0, stay.min());
-        assertTrue(stay.basis().contains("TOUR_API_KEY"));
+        assertTrue(stay.basis().contains("관광공사"));
+        assertFalse(stay.basis().contains("TOUR_API_KEY"));
         assertEquals(Source.NOT_ESTIMATED, byLabel(e, "요금 모름 3곳").source());
         assertFalse(e.tourApi());
-        assertTrue(e.notes().get(0).contains("TOUR_API_KEY"));
+        assertTrue(e.notes().get(0).contains("관광공사"));
+        assertFalse(String.join(" ", e.notes()).contains("TOUR_API_KEY"));
+        assertFalse(e.items().stream().anyMatch(i -> i.basis().contains("TOUR_API_KEY")));
         assertEquals(0, e.publicShare());
         assertEquals("낮음", e.confidence());
         assertEquals(2, e.missing());

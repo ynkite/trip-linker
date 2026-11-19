@@ -58,7 +58,8 @@ class BudgetNoKeyContextTest {
                     assertEquals(Math.round(50 / 14.0 * 1_855), car.min());
                     assertTrue(e.items().stream().anyMatch(i -> i.label().contains("요금 모름 2곳")));
                     assertTrue(e.items().stream().anyMatch(i -> i.label().equals("서울 ↔ 제주 왕복 교통(추정)") && i.source() == Source.ASSUMED));
-                    assertTrue(e.notes().get(0).contains("TOUR_API_KEY"));
+                    assertTrue(e.notes().get(0).contains("관광공사"));
+                    assertFalse(e.notes().get(0).contains("TOUR_API_KEY"));
                     assertEquals(2, e.missing());
                     assertEquals("낮음", e.confidence());
                     assertEquals(9_625L * 7 * 2 + Math.round(50 / 14.0 * 1_855) + 30_000L * 2 * 2, e.min());

@@ -64,7 +64,7 @@ public final class BudgetCalculator {
             if (q == null) {
                 items.add(missing("STAY", label, in.tourApi()
                         ? "관광공사에 이 숙소 · 같은 지역 숙소의 공개 요금이 없음"
-                        : "관광공사 키(TOUR_API_KEY)가 없어 숙박 요금을 조회하지 않음"));
+                        : "관광공사 자료를 연결하지 않아 숙박 요금을 넣지 않음"));
             } else {
                 items.add(new Item("STAY", label,
                         q.minPerRoom() * rooms * in.nights(), q.maxPerRoom() * rooms * in.nights(),
@@ -128,7 +128,7 @@ public final class BudgetCalculator {
         }
         if (in.unknownTours() > 0) {
             items.add(missing("TOUR", "입장료 · 요금 모름 " + in.unknownTours() + "곳",
-                    in.tourApi() ? "관광공사에 이용요금이 없거나 글에 금액이 없음" : "관광공사 키(TOUR_API_KEY)가 없어 조회하지 않음"));
+                    in.tourApi() ? "관광공사에 이용요금이 없거나 글에 금액이 없음" : "관광공사 자료를 연결하지 않아 넣지 않음"));
         }
 
         List<Item> counted = items.stream().filter(i -> i.source() != Source.NOT_ESTIMATED).toList();
@@ -142,7 +142,7 @@ public final class BudgetCalculator {
         String confidence = share >= 70 && missing == 0 ? "높음" : share >= 40 ? "보통" : "낮음";
 
         List<String> notes = new ArrayList<>();
-        if (!in.tourApi()) notes.add("관광공사 키(TOUR_API_KEY)가 없어 숙박 · 입장료를 조회하지 않았습니다.");
+        if (!in.tourApi()) notes.add("관광공사 자료를 연결하지 않아 숙박 · 입장료는 넣지 않았습니다.");
         if (missing > 0) notes.add("미산정 " + missing + "개는 합계에 넣지 않았습니다. 합계는 계산한 항목만의 범위입니다.");
         if (trip != null) notes.add("출발지 ↔ 여행지 교통은 거리 × 공개 운임 단가로 낸 추정입니다. 실제 운임(TAGO 조회)은 키가 없어 연결하지 않았습니다.");
         notes.add("실제 예약 요금과 다를 수 있습니다. 숙박은 관광공사에 공개된 객실 최저요금 기준이며 예약 확정가가 아닙니다.");
