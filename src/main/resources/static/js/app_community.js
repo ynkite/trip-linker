@@ -788,7 +788,9 @@ function renderTrendChart(trend) {
     }).join('');
   }
   if (!trend.length) { svg.innerHTML = ''; return; }
-  var W = 640, H = 200, PAD = 28;
+  // 고정 640 으로 그리면 넓은 칸에서 가운데만 쓰고 양옆이 빈다 → 실제 폭으로 그림
+  var W = Math.round(svg.getBoundingClientRect().width) || 640, H = 200, PAD = 28;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   var maxVal = Math.max.apply(null, [1].concat(trend.map(function(t) {
     return Math.max(t.newUsers || 0, t.newTrips || 0, t.viewCount || 0);
   })));

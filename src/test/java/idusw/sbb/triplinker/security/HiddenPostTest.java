@@ -32,6 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.hamcrest.Matchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -63,6 +64,7 @@ class HiddenPostTest {
     @Autowired PlaceReviewRepository placeReviewRepository;
     @Autowired UserRepository userRepository;
     @Autowired TravelPlanRepository travelPlanRepository;
+    @Autowired idusw.sbb.triplinker.domain.system.repository.PostViewLogRepository postViewLogRepository;
 
     MockMvc mvc;
     User spammer, reader, admin;
@@ -90,7 +92,7 @@ class HiddenPostTest {
 
         PostService service = new PostService(postRepository, postLikeRepository, postCommentRepository,
                 postScrapRepository, postImageRepository, placeReviewRepository, mock(PlaceService.class),
-                userRepository, travelPlanRepository, mock(LocalFileService.class));
+                userRepository, travelPlanRepository, mock(LocalFileService.class), postViewLogRepository);
         mvc = MockMvcBuilders.standaloneSetup(
                         new PostController(service, mock(SystemService.class), mock(LocalFileService.class)),
                         new PlaceController(placeReviewRepository))
@@ -166,6 +168,14 @@ class HiddenPostTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[*].title", not(hasItem(spam.getTitle()))))
                 .andExpect(jsonPath("$.data[*].title", hasItem(normal.getTitle())));
+    }
+
+    @Test
+    @DisplayName("글을 열면 조회 기록이 한 줄 남는다(관리자 기간별 통계의 조회수가 늘 0 이던 것)")
+    void viewingPostLeavesViewLog() throws Exception {
+        long before = postViewLogRepository.count();
+        mvc.perform(get("/api/posts/" + normal.getId())).andExpect(status().isOk());
+        assertThat(postViewLogRepository.count()).isEqualTo(before + 1);
     }
 
     @Test

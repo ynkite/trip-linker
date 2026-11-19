@@ -40,6 +40,7 @@ public class PostService {
     private final UserRepository userRepository;
     private final TravelPlanRepository travelPlanRepository;
     private final LocalFileService localFileService;
+    private final idusw.sbb.triplinker.domain.system.repository.PostViewLogRepository postViewLogRepository;
 
     //후기 목록 조회
     public List<PostListResponseDto> getMyPosts(Long userId) {
@@ -218,6 +219,9 @@ public class PostService {
         Post post = findVisiblePost(postId, userId, admin);
 
         post.increaseViewCount();
+        // 관리자 기간별 통계(일자별 조회수)는 이 기록을 센다. 전에는 쌓는 곳이 없어 늘 0 이었다
+        postViewLogRepository.save(idusw.sbb.triplinker.domain.system.entity.PostViewLog.builder()
+                .post(post).viewer(userId == null ? null : userRepository.getReferenceById(userId)).build());
 
         List<PostComment> comments = postCommentRepository
                 .findByPostIdAndStatusInOrderByCreatedAtAsc(postId, List.of("ACTIVE","HIDDEN"), Pageable.unpaged())
