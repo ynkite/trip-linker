@@ -24,10 +24,10 @@
         gap: 8px;
     }
 
-    /* 큐레이션: 모바일에서 애니메이션 제거, 높이 자동 */
+    /* 큐레이션: 모바일에서 애니메이션 제거, 높이 자동. 카드(420px)가 불러오기 전에도 자리를 잡아 아래 칸이 밀리지 않게 */
     .curation-panel {
         height: auto !important;
-        min-height: 0 !important;
+        min-height: 420px !important;
         align-self: start !important;
         overflow: hidden;
     }

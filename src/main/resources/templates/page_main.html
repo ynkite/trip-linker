@@ -108,30 +108,6 @@
      * ✅ [서비스 로직] — 이 블록은 그대로 유지하세요.
      * MOCK 데이터가 없으면 자동으로 api.get() 호출로 전환됩니다.
      * ============================================================ */
-    // ── UI 고정 텍스트 및 레이아웃 설정 ──
-    const HERO_TEXT = {
-      eyebrow:     'AI 여행 일정',
-      title:       '어디로 떠날까요?',
-      subtitle:    '여행지와 날짜를 넣으면 하루별 동선과 예상 비용을 정리해 드려요',
-      inputPlaceholder: '여행지 입력 (예: 제주도, 강릉, 부산...)',
-      btnLabel:    'AI 플랜 →',
-      quickLabel:  '빠른 선택',
-    };
-
-    const HERO_FEATURE_CARDS = [
-      { title: '예산',   desc: '숙박비 · 식비 · 교통비를 항목별로 계산' },
-      { title: '지도',   desc: '하루 동선을 지도에서 보고 순서를 바꿔요' },
-      { title: '다음 여행', desc: '지난 여행의 취향을 이어서 반영' },
-    ];
-
-    const QUICK_DESTS = [
-      { label: '제주도' },
-      { label: '강릉' },
-      { label: '부산' },
-      { label: '전주' },
-      { label: '경주' },
-    ];
-
     const SECTION_META = {
       top3:      { rankColor: 'var(--warm)' },
       food:      { rankColor: 'var(--sage)' },
@@ -371,17 +347,6 @@
 
     // ── 메인 페이지 초기화 (하드코딩 Fallback 자동 지원) ──
     async function initMainPage() {
-      // 1. 고정 정적 텍스트 주입
-      const eyEl = document.querySelector('.hsc-ey'), ttlEl = document.querySelector('.hsc-ttl'), subEl = document.querySelector('.hsc-sub');
-      const inpEl = document.getElementById('heroInp'), btnEl = document.querySelector('.hsc-go');
-      if (eyEl) eyEl.textContent = HERO_TEXT.eyebrow;
-      if (ttlEl) ttlEl.textContent = HERO_TEXT.title;
-      if (subEl) subEl.textContent = HERO_TEXT.subtitle;
-      const featsEl = document.querySelector('.hsc-feats');
-      if (featsEl) featsEl.innerHTML = HERO_FEATURE_CARDS.map(c => `<li><b>${c.title}</b><span>${c.desc}</span></li>`).join('');
-
-      const destRowEl = document.querySelector('.hsc-dest-row');
-      if (destRowEl) destRowEl.innerHTML = `<span class="hsc-lbl">${HERO_TEXT.quickLabel}</span>` + QUICK_DESTS.map(d => `<button type="button" class="hsc-dest" onclick="window._pendingDestText='${d.label}';goNewPlanner()">${d.label}</button>`).join('');
       // 2. 큐레이션 데이터 로드 (MOCK 배열이 있으면 쓰고, 삭제되었으면 api 통신)
       let curations = typeof MOCK_CURATIONS !== 'undefined' ? MOCK_CURATIONS : null;
       if (!curations && typeof api !== 'undefined') {
@@ -813,12 +778,12 @@
     <div class="hero">
       <div>
         <section class="hsc" aria-labelledby="heroTitle">
-          <p class="hsc-ey"></p>
-          <h1 class="hsc-ttl" id="heroTitle"></h1>
-          <p class="hsc-sub"></p>
-          <div class="hsc-dest-row"></div>
+          <p class="hsc-ey">AI 여행 일정</p>
+          <h1 class="hsc-ttl" id="heroTitle">어디로 떠날까요?</h1>
+          <p class="hsc-sub">여행지와 날짜를 넣으면 하루별 동선과 예상 비용을 정리해 드려요</p>
+          <div class="hsc-dest-row"><span class="hsc-lbl">빠른 선택</span><button type="button" class="hsc-dest" onclick="window._pendingDestText='제주도';goNewPlanner()">제주도</button><button type="button" class="hsc-dest" onclick="window._pendingDestText='강릉';goNewPlanner()">강릉</button><button type="button" class="hsc-dest" onclick="window._pendingDestText='부산';goNewPlanner()">부산</button><button type="button" class="hsc-dest" onclick="window._pendingDestText='전주';goNewPlanner()">전주</button><button type="button" class="hsc-dest" onclick="window._pendingDestText='경주';goNewPlanner()">경주</button></div>
           <!-- 기능 소개: 카드 세 장 대신 실제로 하는 일을 한 줄씩 -->
-          <ul class="hsc-feats"></ul>
+          <ul class="hsc-feats"><li><b>예산</b><span>숙박비 · 식비 · 교통비를 항목별로 계산</span></li><li><b>지도</b><span>하루 동선을 지도에서 보고 순서를 바꿔요</span></li><li><b>다음 여행</b><span>지난 여행의 취향을 이어서 반영</span></li></ul>
           <button class="hsc-go hsc-go-main" type="button" onclick="goNewPlanner()">여행지 직접 입력하기</button>
         </section>
       </div>
