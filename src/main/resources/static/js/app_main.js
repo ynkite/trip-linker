@@ -2957,6 +2957,7 @@ function toggleMarker(btn, type) {
     } else {
         document.querySelectorAll('.map-pin[data-type="'+type+'"]').forEach(p => p.style.display=isOn?'flex':'none');
     }
+    if (typeof layoutMapLabels === 'function') layoutMapLabels();
 
     toast((isOn?'✅ 표시':'❌ 숨김') + ' · ' + btn.textContent.trim().replace(/[🏨🍽️📍☕\s]/g,''));
 }
