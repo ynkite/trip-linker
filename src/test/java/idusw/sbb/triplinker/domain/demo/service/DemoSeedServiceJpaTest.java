@@ -6,6 +6,7 @@ import idusw.sbb.triplinker.domain.expense.entity.Expense;
 import idusw.sbb.triplinker.domain.place.entity.Place;
 import idusw.sbb.triplinker.domain.place.entity.PlaceCategory;
 import idusw.sbb.triplinker.domain.plan.entity.TravelPlan;
+import idusw.sbb.triplinker.domain.post.entity.PlaceReview;
 import idusw.sbb.triplinker.domain.post.entity.Post;
 import idusw.sbb.triplinker.domain.post.entity.PostComment;
 import idusw.sbb.triplinker.domain.user.entity.User;
@@ -22,7 +23,11 @@ import org.springframework.context.annotation.Import;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -51,6 +56,7 @@ class DemoSeedServiceJpaTest {
     }
 
     private static final LocalDate TODAY = LocalDate.of(2026, 11, 19);
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     @Autowired DemoSeedService seedService;
     @Autowired EntityManager em;
@@ -87,17 +93,46 @@ class DemoSeedServiceJpaTest {
         return em.createQuery(jpql, Long.class).setParameter("uid", demo.getId()).getSingleResult();
     }
 
+    private List<TravelPlan> plans() {
+        return em.createQuery("SELECT p FROM TravelPlan p WHERE p.user.id = :uid", TravelPlan.class)
+                .setParameter("uid", demo.getId()).getResultList();
+    }
+
+    private TravelPlan plan(String destination) {
+        return plans().stream().filter(p -> destination.equals(p.getDestination())).findFirst().orElseThrow();
+    }
+
+    /** 경로 JSON 의 날짜별 [장소 이름 → 평점 글]. 이동 줄은 뺀다. */
+    private List<Map<String, String>> starsByDay(TravelPlan plan) throws Exception {
+        List<Map<String, String>> days = new ArrayList<>();
+        for (JsonNode day : JSON.readTree(plan.getRouteJson())) {
+            Map<String, String> m = new HashMap<>();
+            for (JsonNode p : day.get("places")) {
+                if (p.has("type")) m.put(p.get("name").asText(), p.get("stars").asText());
+            }
+            days.add(m);
+        }
+        return days;
+    }
+
+    private static double ratingOf(String stars) {
+        return Double.parseDouble(stars.substring(stars.lastIndexOf(' ') + 1));
+    }
+
+    private long reviewCount(String placeName) {
+        return em.createQuery("SELECT COUNT(r) FROM PlaceReview r WHERE r.place.name = :n", Long.class)
+                .setParameter("n", placeName).getSingleResult();
+    }
+
     @Test
-    @DisplayName("되돌리면 일정 4개(지역 4곳), 가계부, 후기 3개, 스크랩이 들어간다")
+    @DisplayName("되돌리면 일정 4개(부산·속초·대구·대전), 가계부, 후기 3개, 스크랩이 들어간다")
     void seedsExampleData() throws Exception {
         seedService.reset(demo.getId(), TODAY);
 
-        List<TravelPlan> plans = em.createQuery(
-                "SELECT p FROM TravelPlan p WHERE p.user.id = :uid", TravelPlan.class)
-                .setParameter("uid", demo.getId()).getResultList();
+        List<TravelPlan> plans = plans();
         assertThat(plans).hasSize(4);
         assertThat(plans).extracting(TravelPlan::getDestination)
-                .containsExactlyInAnyOrder("서울", "제주", "경주", "전주");
+                .containsExactlyInAnyOrder("부산", "속초", "대구", "대전");
         assertThat(plans).allMatch(p -> "FIXED".equals(p.getStatus()) && p.getForm() != null);
         // 지난 여행과 다가오는 여행이 섞여 있다
         assertThat(plans).anyMatch(p -> p.getEndDate().isBefore(TODAY));
@@ -106,18 +141,144 @@ class DemoSeedServiceJpaTest {
         assertThat(plans).allMatch(p -> p.getCreatedAt().isBefore(TODAY.atStartOfDay()));
 
         // 지도: 모든 장소에 좌표가 있고 장소 사이에 이동 줄이 있다
-        TravelPlan jeju = plans.stream().filter(p -> "제주".equals(p.getDestination())).findFirst().orElseThrow();
-        JsonNode route = new ObjectMapper().readTree(jeju.getRouteJson());
-        assertThat(route).hasSize(3);
+        JsonNode route = JSON.readTree(plan("부산").getRouteJson());
+        assertThat(route).hasSize(2);
         JsonNode day1 = route.get(0).get("places");
+        assertThat(day1.get(0).get("name").asText()).isEqualTo("해운대블루라인파크 미포정거장");
         assertThat(day1.get(0).get("lat").isNumber()).isTrue();
         assertThat(day1.get(0).get("isFound").asBoolean()).isTrue();
         assertThat(day1.get(1).has("transit")).isTrue();
+        // 가까운 곳은 걸어서(0원), 수영강을 건너는 둘째 날 첫 이동은 대중교통
+        assertThat(day1.get(9).get("transit").asText()).startsWith("🚶 도보").endsWith("₩0");
+        assertThat(route.get(1).get("places").get(1).get("transit").asText()).startsWith("🚌 대중교통");
 
         assertThat(count("SELECT COUNT(e) FROM Expense e WHERE e.user.id = :uid")).isGreaterThanOrEqualTo(20);
         assertThat(count("SELECT COUNT(p) FROM Post p WHERE p.user.id = :uid")).isEqualTo(3);
         assertThat(count("SELECT COUNT(s) FROM PostScrap s WHERE s.user.id = :uid")).isEqualTo(1);
         assertThat(count("SELECT COUNT(s) FROM Scrap s WHERE s.user.id = :uid")).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("대표 일정(부산)의 모든 장소에 평점이 내려오고, 평균은 3 이상이며 값이 두 가지 이상이다")
+    void showcaseTripHasRatingsEverywhere() throws Exception {
+        seedService.reset(demo.getId(), TODAY);
+
+        List<Double> values = new ArrayList<>();
+        for (Map<String, String> day : starsByDay(plan("부산"))) {
+            day.forEach((name, stars) -> {
+                assertThat(stars).as(name).startsWith("★").doesNotContain("평점 정보 없음");
+                values.add(ratingOf(stars));
+            });
+        }
+        assertThat(values).hasSize(11).allMatch(v -> v >= 3.0 && v <= 5.0);
+        assertThat(new HashSet<>(values)).hasSizeGreaterThanOrEqualTo(2);
+        assertThat(values).noneMatch(v -> v == 5.0);
+    }
+
+    @Test
+    @DisplayName("나머지 일정도 날마다 두 곳 이상 평점이 보인다")
+    void otherTripsHaveRatingsEachDay() throws Exception {
+        seedService.reset(demo.getId(), TODAY);
+        for (String dest : List.of("속초", "대구", "대전")) {
+            for (Map<String, String> day : starsByDay(plan(dest))) {
+                assertThat(day.values().stream().filter(s -> s.startsWith("★")).count())
+                        .as(dest + " " + day.keySet()).isGreaterThanOrEqualTo(2);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("후기 전용 테스트 계정 둘이 생기고(이름에 '테스트'), 다시 되돌려도 별점 수가 같다")
+    void reviewerAccountsAndIdempotentRatings() {
+        seedService.reset(demo.getId(), TODAY);
+        List<User> reviewers = em.createQuery("SELECT u FROM User u WHERE u.username LIKE 'demo_review_%'", User.class)
+                .getResultList();
+        assertThat(reviewers).hasSize(2).allMatch(u -> u.getName().startsWith("테스트") && "USER".equals(u.getRole()));
+        long total = em.createQuery("SELECT COUNT(r) FROM PlaceReview r", Long.class).getSingleResult();
+        assertThat(total).isEqualTo(DemoSeedData.RATINGS.stream()
+                .filter(r -> !DemoSeedData.USER.equals(r.reviewer())
+                        || DemoSeedData.TRIPS.stream().anyMatch(t -> t.key().equals(r.tripKey()) && t.isPast(TODAY)))
+                .count());
+        // 테스트 유저 별점은 그 여행 후기 글에 붙는다
+        assertThat(count("SELECT COUNT(r) FROM PlaceReview r WHERE r.user.id = :uid AND r.post IS NULL")).isZero();
+
+        // 관리자가 후기 계정을 정지·개명해 두어도 다음 되돌리기에서 돌아온다
+        em.createQuery("UPDATE User u SET u.status = 'SUSPENDED', u.name = '바뀐 이름' WHERE u.username = 'demo_review_a'")
+                .executeUpdate();
+        em.clear();
+        seedService.reset(demo.getId(), TODAY);
+
+        assertThat(em.createQuery("SELECT COUNT(r) FROM PlaceReview r", Long.class).getSingleResult()).isEqualTo(total);
+        assertThat(em.createQuery("SELECT COUNT(u) FROM User u WHERE u.username LIKE 'demo_review_%'", Long.class)
+                .getSingleResult()).isEqualTo(2);
+        User a = em.createQuery("SELECT u FROM User u WHERE u.username = 'demo_review_a'", User.class).getSingleResult();
+        assertThat(a.getStatus()).isEqualTo("ACTIVE");
+        assertThat(a.getName()).isEqualTo("테스트 리뷰어 A");
+    }
+
+    @Test
+    @DisplayName("다른 회원 후기가 이미 있는 장소에는 별점을 더하지 않고, 화면 평점은 그 회원 후기 평균이다")
+    void communityRatedPlacesAreLeftAlone() throws Exception {
+        Place galbi = Place.builder().name("해운대암소갈비집").category(PlaceCategory.RESTAURANT).build();
+        em.persist(galbi);
+        User managedOther = em.find(User.class, other.getId());
+        for (int stars : new int[]{5, 4, 4, 5}) {
+            em.persist(PlaceReview.builder().place(galbi).user(managedOther).rating(stars).comment("맛있어요").build());
+        }
+        em.flush();
+
+        seedService.reset(demo.getId(), TODAY);
+
+        assertThat(reviewCount("해운대암소갈비집")).isEqualTo(4);
+        assertThat(starsByDay(plan("부산")).get(0).get("해운대암소갈비집")).isEqualTo("★★★★☆ 4.5");
+        // 장소 행이 하나만 있다(이름이 같은 장소를 새로 만들지 않음)
+        assertThat(em.createQuery("SELECT COUNT(p) FROM Place p WHERE p.name = '해운대암소갈비집'", Long.class)
+                .getSingleResult()).isEqualTo(1);
+        // 장소당 별점은 3개를 넘지 않는다(인기 장소 후기 수 순위 위로 오르지 않게)
+        List<Long> perPlace = em.createQuery("SELECT COUNT(r) FROM PlaceReview r WHERE r.user.id <> :o GROUP BY r.place.id", Long.class)
+                .setParameter("o", other.getId()).getResultList();
+        assertThat(perPlace).allMatch(c -> c <= 3);
+    }
+
+    @Test
+    @DisplayName("테스트 글·별점은 다른 회원 글·후기보다 앞 날짜라 최신순 위 세 자리에 오지 않는다")
+    void seededContentStaysBelowOthers() {
+        // 다른 회원이 어제 글 셋과 후기 하나를 남겼다고 치자
+        User managedOther = em.find(User.class, other.getId());
+        List<Long> recentIds = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            Post p = Post.builder().user(managedOther).title("최근 글" + i).content("내용").isPublic(true).build();
+            em.persist(p);
+            recentIds.add(p.getId());
+        }
+        Place place = em.createQuery("SELECT p FROM Place p WHERE p.name = '장소0'", Place.class).getSingleResult();
+        PlaceReview review = PlaceReview.builder().place(place).user(managedOther).rating(4).comment("좋아요").build();
+        em.persist(review);
+        em.flush();
+        LocalDateTime yesterday = TODAY.minusDays(1).atTime(9, 0);
+        em.createQuery("UPDATE Post p SET p.createdAt = :at WHERE p.id IN :ids")
+                .setParameter("at", yesterday).setParameter("ids", recentIds).executeUpdate();
+        em.createQuery("UPDATE Post p SET p.createdAt = :at WHERE p.id = :id")
+                .setParameter("at", yesterday.minusDays(30)).setParameter("id", otherPost.getId()).executeUpdate();
+        em.createQuery("UPDATE PlaceReview r SET r.createdAt = :at WHERE r.id = :id")
+                .setParameter("at", yesterday).setParameter("id", review.getId()).executeUpdate();
+        em.clear();
+
+        seedService.reset(demo.getId(), TODAY);
+
+        List<Post> top3 = em.createQuery("SELECT p FROM Post p WHERE p.isPublic = true ORDER BY p.createdAt DESC", Post.class)
+                .setMaxResults(3).getResultList();
+        assertThat(top3).extracting(Post::getId).containsExactlyInAnyOrderElementsOf(recentIds);
+        LocalDateTime newestSeeded = em.createQuery(
+                "SELECT MAX(r.createdAt) FROM PlaceReview r WHERE r.user.id <> :o", LocalDateTime.class)
+                .setParameter("o", other.getId()).getSingleResult();
+        assertThat(newestSeeded).isBefore(yesterday);
+        // 테스트 유저 후기 글은 여행이 끝난 뒤 날짜다
+        TravelPlan busan = plan("부산");
+        List<LocalDateTime> busanPosts = em.createQuery(
+                "SELECT p.createdAt FROM Post p WHERE p.plan.id = :pid", LocalDateTime.class)
+                .setParameter("pid", busan.getId()).getResultList();
+        assertThat(busanPosts).isNotEmpty().allMatch(at -> at.toLocalDate().isAfter(busan.getEndDate()));
     }
 
     @Test
@@ -145,6 +306,9 @@ class DemoSeedServiceJpaTest {
         // 테스트 유저가 남의 글에 댓글
         em.persist(PostComment.builder().post(em.find(Post.class, otherPost.getId())).user(managedDemo)
                 .content("테스트 댓글").status("ACTIVE").build());
+        // 테스트 유저가 별점을 하나 더 남김
+        Place someplace = em.createQuery("SELECT p FROM Place p WHERE p.name = '장소1'", Place.class).getSingleResult();
+        em.persist(PlaceReview.builder().place(someplace).user(managedDemo).rating(3).comment("추가 별점").build());
         em.flush();
         em.clear();
 
@@ -153,6 +317,7 @@ class DemoSeedServiceJpaTest {
         assertThat(titles()).containsExactlyInAnyOrderElementsOf(titles);
         assertThat(count("SELECT COUNT(e) FROM Expense e WHERE e.user.id = :uid")).isEqualTo(expenses);
         assertThat(count("SELECT COUNT(c) FROM PostComment c WHERE c.user.id = :uid")).isZero();
+        assertThat(reviewCount("장소1")).isZero();
 
         // 다른 회원 쪽은 그대로
         assertThat(em.find(TravelPlan.class, otherPlan.getId())).isNotNull();
@@ -179,7 +344,4 @@ class DemoSeedServiceJpaTest {
         return em.createQuery("SELECT p.title FROM TravelPlan p WHERE p.user.id = :uid", String.class)
                 .setParameter("uid", demo.getId()).getResultList();
     }
-
-    @SuppressWarnings("unused")
-    private static LocalDateTime noon() { return TODAY.atTime(12, 0); }
 }

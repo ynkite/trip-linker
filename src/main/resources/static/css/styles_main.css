@@ -45,6 +45,11 @@
     --r-lg: 20px;
     --sh: 0 2px 16px rgba(45, 158, 138, .08);
     --sh-h: 0 8px 32px rgba(45, 158, 138, .18);
+    /* 장소 종류 색: 지도 마커와 왼쪽 종류 단추가 같이 쓴다 */
+    --pin-stay: #1D8A6E;
+    --pin-food: #EA5A47;
+    --pin-tour: #2F80D0;
+    --pin-cafe: #7C3AED;
 }
 
 * {
@@ -2612,55 +2617,20 @@ nav {
     white-space: nowrap
 }
 
-.mf-stay {
-    border-color: var(--sage);
-    color: var(--sage);
-    background: var(--sage-pale)
+/* 종류 단추: 꺼지면 연한 바탕 + 종류 색 글자, 켜지면 종류 색 바탕 */
+.mf-stay { --pin: var(--pin-stay); background: var(--sage-pale) }
+.mf-food { --pin: var(--pin-food); background: #FEF3F2 }
+.mf-tour { --pin: var(--pin-tour); background: #EBF4FC }
+.mf-cafe { --pin: var(--pin-cafe); background: #F5F3FF }
+
+.mf-stay, .mf-food, .mf-tour, .mf-cafe {
+    border-color: var(--pin);
+    color: var(--pin)
 }
 
-.mf-stay.on {
-    background: var(--sage);
+.mf-stay.on, .mf-food.on, .mf-tour.on, .mf-cafe.on {
+    background: var(--pin);
     color: #fff
-}
-
-.mf-food {
-    border-color: var(--coral);
-    color: var(--coral);
-    background: #FEF3F2
-}
-
-.mf-food.on {
-    background: var(--coral);
-    color: #fff
-}
-
-.mf-tour {
-    border-color: var(--sky);
-    color: var(--sky);
-    background: #EBF4FC
-}
-
-.mf-tour.on {
-    background: var(--sky);
-    color: #fff
-}
-
-.mf-cafe {
-    border-color: #A78BFA;
-    /* 보라색 테두리 */
-    color: #7C3AED;
-    /* 보라색 글자 */
-    background: #F5F3FF;
-    /* 평소에는 연한 보라색 배경 (맛집/숙소와 통일) */
-}
-
-.mf-cafe.on {
-    background: #7C3AED;
-    /*  켜졌을 때는 진한 보라색 배경 */
-    color: #fff;
-    /*  글자색은 흰색으로 변환 (맛집/숙소와 통일) */
-    border-color: #7C3AED;
-    /* 테두리도 진한 보라색으로 일치 */
 }
 
 .day-tabs {
@@ -3087,6 +3057,101 @@ nav {
     position: absolute;
     inset: 0;
     background: repeating-linear-gradient(0deg, rgba(45, 158, 138, .03) 0, rgba(45, 158, 138, .03) 1px, transparent 1px, transparent 36px), repeating-linear-gradient(90deg, rgba(45, 158, 138, .03) 0, rgba(45, 158, 138, .03) 1px, transparent 1px, transparent 36px)
+}
+
+/* 지도 마커(카카오 CustomOverlay). 이름표 자리는 page_map.html 의 layoutMapLabels 가 정한다 */
+.tl-pin {
+    --pin: var(--pin-tour);
+    --pin-size: 36px;
+    position: relative;
+    width: 0;
+    height: 0;
+    cursor: pointer
+}
+
+.tl-pin.t-stay { --pin: var(--pin-stay) }
+.tl-pin.t-food { --pin: var(--pin-food) }
+.tl-pin.t-cafe { --pin: var(--pin-cafe) }
+
+.tl-pin-dot {
+    position: absolute;
+    left: calc(var(--pin-size) / -2);
+    top: calc(var(--pin-size) / -2);
+    width: var(--pin-size);
+    height: var(--pin-size);
+    border-radius: 50%;
+    background: var(--pin);
+    border: 2.5px solid #fff;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, .3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(var(--pin-size) * .44);
+    line-height: 1;
+    z-index: 2
+}
+
+/* 누르는 자리는 보이는 원보다 넓게 */
+.tl-pin-dot::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%
+}
+
+/* 지금 배율에서 다른 마커와 원이 겹치는 마커는 작은 점(종류 색 · 흰 테두리, 그림 없이). layoutMapLabels 가 붙이고 뗀다 */
+.tl-pin.small { --pin-size: 16px }
+.tl-pin.small .tl-pin-dot { font-size: 0; border-width: 2px }
+
+.tl-pin-label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    visibility: hidden;
+    max-width: 12em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .07);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--text1);
+    z-index: 1
+}
+
+.tl-pin-label.on { visibility: visible }
+
+/* 누른 마커는 이름 전체 */
+.tl-pin.pinned .tl-pin-label { max-width: none }
+
+/* 휴대폰 「이름」 켜고 끄기 — PC 에서는 숨김(styles_responsive_map.css 에서 켬) */
+.map-label-toggle { display: none }
+
+/* 고정 경로 모드 안내: 지도 위쪽 가운데 작은 띠 */
+.map-demo-notice {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100% - 120px);
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: #fff6e5;
+    border: 1px solid #f0d9a8;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+    color: #8a6100;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: -.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 6
 }
 
 .map-subtabs {

@@ -2615,11 +2615,12 @@ window._handleWriteImageSelect = function(input) {
     const { escapeHtml, parseRouteData, getRouteData, getAllPlaces } = window._commUtil;
 
     function getPinColor(type) {
-        if (type === 'stay') return '#2D9E8A';
-        if (['food','lunch','dinner','breakfast'].includes(type)) return '#F87171';
-        if (type === 'cafe') return '#7C3AED';
-        if (type === 'tour') return '#22B5C4';
-        return '#2D9E8A';
+        // 색 값은 styles_main.css 의 --pin-* (지도 화면 마커 · 종류 단추와 같은 값)
+        if (type === 'stay') return 'var(--pin-stay)';
+        if (['food','lunch','dinner','breakfast'].includes(type)) return 'var(--pin-food)';
+        if (type === 'cafe') return 'var(--pin-cafe)';
+        if (type === 'tour') return 'var(--pin-tour)';
+        return 'var(--pin-stay)';
     }
 
     function getDayColor(day) {
