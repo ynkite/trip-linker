@@ -94,6 +94,20 @@ public class PlaceController {
         return ResponseEntity.ok(ApiResponse.success("리뷰 조회 성공", result));
     }
 
+    // 지도 일정에서 장소를 눌렀을 때의 후기 팝업. 일정 장소는 번호 없이 이름만 있어 이름으로 찾는다.
+    // 숨김 · 삭제된 후기 글에 달린 별점은 뺀다(/{placeId}/posts 와 같은 기준)
+    @Transactional(readOnly = true)
+    @GetMapping("/reviews")
+    public ResponseEntity<ApiResponse<List<PlaceReviewResponseDto>>> getReviewsByPlaceName(@RequestParam String name) {
+        List<PlaceReviewResponseDto> result = placeReviewRepository
+                .findByPlace_NameOrderByCreatedAtDesc(name)
+                .stream()
+                .filter(pr -> pr.getPost() == null || "ACTIVE".equals(pr.getPost().getStatus()))
+                .map(PlaceReviewResponseDto::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success("리뷰 조회 성공", result));
+    }
+
     private PlaceCategory toCategory(String s) {
         return switch (s.toLowerCase()) {
             case "stay" -> PlaceCategory.ACCOMMODATION;

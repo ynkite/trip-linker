@@ -1657,33 +1657,31 @@ async function showMapPlacePopup(key, type) {
             : '';
     }
 
-    const res = await api.get('/api/maps/places?keyword=' + encodeURIComponent(key));
-    if (!res.success || !res.data || !res.data.length) {
-        document.getElementById('mpReviews').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">아직 후기가 없습니다.</div>';
-        return;
-    }
-
-    const place = res.data[0];
-    document.getElementById('mpPlace').textContent = place.name || key;
-
-    const reviews = place.reviews || [];
+    // 일정 장소는 이름만 있어 이름으로 후기를 읽는다(GET /api/places/reviews?name=)
+    const res = await api.get('/api/places/reviews?name=' + encodeURIComponent(key));
+    const place = { name: key };
+    const reviews = (res && res.success && Array.isArray(res.data) ? res.data : [])
+        .map(r => ({ rating: r.rating, content: r.comment, reviewerName: r.writerName }));
     if (!reviews.length) {
         document.getElementById('mpReviews').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">아직 후기가 없습니다.</div>';
         return;
     }
 
     let h = `<div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--sage-d)">💬 방문 후기 (${reviews.length}개)</div>`;
-    reviews.forEach(r => {
-        const stars = '★'.repeat(Math.floor(r.rating || 0)) + '☆'.repeat(5 - Math.floor(r.rating || 0));
+    // 후기 글 · 이름은 회원이 쓴 값이라 HTML 로 넣기 전에 이스케이프하고, 전체 보기는 번호로 넘긴다
+    const starsOf = r => '★'.repeat(Math.floor(r.rating || 0)) + '☆'.repeat(5 - Math.floor(r.rating || 0));
+    window._mpOpenReview = i => showReviewDetail(place.name || key, tl, starsOf(reviews[i]) + ' ' + reviews[i].rating, reviews[i].content || '');
+    reviews.forEach((r, i) => {
+        const stars = starsOf(r);
         h += `<div style="background:var(--cream);border-radius:10px;padding:12px;margin-bottom:9px;cursor:pointer"
-               onclick="showReviewDetail('${(place.name||key).replace(/'/g,"\\'")}','${tl}','${stars} ${r.rating}','${(r.content||'').replace(/'/g,"\\'")}')">
+               onclick="_mpOpenReview(${i})">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--sage);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${(r.reviewerName||'?')[0]}</div>
-        <span style="font-size:12px;font-weight:700">${r.reviewerName||'익명'}</span>
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--sage);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${_escSafe((r.reviewerName||'?')[0])}</div>
+        <span style="font-size:12px;font-weight:700">${_escSafe(r.reviewerName||'익명')}</span>
         <span style="color:#F5A623;font-size:12px">${stars}</span>
-        <span style="font-size:11px;font-weight:700">${r.rating||''}</span>
+        <span style="font-size:11px;font-weight:700">${Number(r.rating)||''}</span>
       </div>
-      <p style="font-size:12px;color:var(--text2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${r.content||''}</p>
+      <p style="font-size:12px;color:var(--text2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${_escSafe(r.content||'')}</p>
       <div style="font-size:10px;color:var(--sage);margin-top:4px">클릭하여 전체 보기 →</div>
     </div>`;
     });

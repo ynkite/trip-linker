@@ -17,6 +17,9 @@ public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> 
     // 특정 장소의 PlaceReview 목록 (별점·한줄평 포함, 최신순)
     List<PlaceReview> findByPlace_IdOrderByCreatedAtDesc(Long placeId);
 
+    // 장소 이름으로 PlaceReview 목록 (지도 일정의 장소는 이름만 갖고 있다)
+    List<PlaceReview> findByPlace_NameOrderByCreatedAtDesc(String name);
+
     // 카테고리별 장소 카드: [placeId, name, category, avgRating, reviewCount]
 
     // 기본(별점순) — 인기 장소/메인페이지에서 사용

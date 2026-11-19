@@ -169,6 +169,18 @@ class HiddenPostTest {
     }
 
     @Test
+    @DisplayName("지도 장소 팝업: 장소 이름으로 후기를 읽고, 숨김 글에 달린 후기는 빠진다")
+    void placeReviewsByNameSkipHiddenPosts() throws Exception {
+        mvc.perform(get("/api/places/reviews").param("name", "해운대"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[*].comment", hasItem("좋아요")))
+                .andExpect(jsonPath("$.data[*].comment", not(hasItem("광고"))));
+        mvc.perform(get("/api/places/reviews").param("name", "없는 장소"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
     @DisplayName("정상: 작성자는 자기 숨김 글을 목록과 상세에서 본다(숨김 안내를 보려고)")
     void writerStillSeesOwnHiddenPost() throws Exception {
         loginAs(spammer);
