@@ -73,6 +73,8 @@ class DemoSeedRouteTest {
                 }
                 if (!lastDay) {
                     assertThat(s.get(s.size() - 1).type()).as(where + " 묵는 날은 숙소로 끝남").isEqualTo("stay");
+                    assertThat(s).as(where + " 묵는 날은 저녁(17시 이후) 식당이 있음")
+                            .anyMatch(x -> "food".equals(x.type()) && !LocalTime.parse(x.time()).isBefore(LocalTime.of(17, 0)));
                 }
             }
         }
