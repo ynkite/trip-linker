@@ -1160,6 +1160,9 @@ nav {
 .card-ttl {
     font-size: 15px;
     font-weight: 700;
+    line-height: 1.45;
+    min-height: 2.9em;      /* 두 줄 자리를 잡아 세 카드의 미리보기 칸 높이를 맞춤 */
+    word-break: keep-all;   /* 「3박4/일」 처럼 낱말 중간에서 꺾이지 않게 */
     margin-bottom: 3px
 }
 
