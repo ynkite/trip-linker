@@ -1,0 +1,33 @@
+sido,city,name,type,adult_fee,source_name,source_url,checked,quote
+부산,,해운대블루라인파크|블루라인파크 해변열차,열차,10000,해운대블루라인파크 공식 누리집 요금안내,https://www.bluelinepark.com/fare.do,2026-11-19,"<td>미포, 송정 출발 10,000원<br>청사포 출발 및 간이역 8,000원</td>"
+부산,,해운대해수욕장,해수욕장,0,비짓부산(부산관광공사),https://www.visitbusan.net/index.do?menuCd=DOM_000000201001001000&uc_seq=373&lang_cd=ko,2026-11-19,<li><p>이용요금</p><span>무료</span></li>
+부산,,누리마루 APEC하우스,기타,0,비짓부산(부산관광공사) 누리마루 APEC하우스,https://www.visitbusan.net/index.do?menuCd=DOM_000000201001001000&uc_seq=2121&lang_cd=ko,2026-11-19,<li><p>이용요금</p><span>무료</span></li>
+부산,,APEC나루공원,공원,0,비짓부산(부산관광공사),https://www.visitbusan.net/index.do?menuCd=DOM_000000201001001000&uc_seq=362&lang_cd=ko,2026-11-19,<li><p>이용요금</p><span>무료</span></li>
+부산,,민락수변공원,공원,0,비짓부산(부산관광공사),https://www.visitbusan.net/index.do?menuCd=DOM_000000201001001000&uc_seq=285&lang_cd=ko,2026-11-19,<li><p>이용요금</p><span>무료</span></li>
+부산,,광안리해수욕장,해수욕장,0,비짓부산(부산관광공사),https://www.visitbusan.net/index.do?menuCd=DOM_000000201001001000&uc_seq=377&lang_cd=ko,2026-11-19,<li><p>이용요금</p><span>무료</span></li>
+강원,속초,설악산국립공원,국립공원,0,속초시 관광 누리집 설악산국립공원 설악동지구,https://www.sokcho.go.kr/ct/tour/attraction/nature?contentSeq=75,2026-11-19,<strong>입장료</strong>무료
+강원,,설악케이블카,케이블카,16000,설악케이블카 공식 누리집 이용안내,https://www.sorakcablecar.co.kr/guide,2026-11-19,"""label"":""대인"",""subLabel"":""중학생 이상"",""price"":""16,000원"""
+강원,속초,아바이마을 갯배|갯배,열차,500,속초시 관광 누리집 아바이마을 갯배,https://www.sokcho.go.kr/ct/tour/attraction/experience?contentSeq=118,2026-11-19,<p><span>대인 : 500원</span></p>
+강원,속초,속초해수욕장|속초해변,해수욕장,0,속초시 관광 누리집,https://www.sokcho.go.kr/ct/tour/attraction/nature?contentSeq=87,2026-11-19,<strong>입장료</strong>무료
+강원,속초,청초호 호수공원,공원,0,속초시 관광 누리집 청초호 호수공원,https://www.sokcho.go.kr/ct/tour/attraction/nature?contentSeq=72,2026-11-19,<strong>입장료</strong>무료
+대구,,달성공원,공원,0,대구관광 누리집(대구광역시) 달성토성,https://tour.daegu.go.kr/index.do?menu_id=00002913&menu_link=/front/tour/tourMapsView.do?tourId=KOATTR_124,2026-11-19,<td>무료</td>
+대구,,김광석다시그리기길,거리,0,대구관광 누리집(대구광역시),https://tour.daegu.go.kr/index.do?menu_id=00002913&menu_link=/front/tour/tourMapsView.do?tourId=KOATTR_215,2026-11-19,<td>무료</td>
+서울,,국립중앙박물관,박물관,0,국립중앙박물관 관람 안내,https://www.museum.go.kr/MUSEUM/contents/M0101000000.do,2026-11-19,"상설전시관, 어린이박물관, 무료 특별전시 해당"
+경북,경주,국립경주박물관,박물관,0,국립경주박물관 관람안내,https://gyeongju.museum.go.kr/kor/html/sub01/0101.html,2026-11-19,"무료 대상:상설전시관,"
+대구,,국립대구박물관,박물관,0,국립대구박물관 누리집,https://daegu.museum.go.kr/,2026-11-19,상설전시실은 누구나 무료로 관람하실 수 있습니다.
+부산,,부산시립미술관,미술관,0,부산시립미술관 관람안내,https://art.busan.go.kr/index.nm?menuCd=1,2026-11-19,현재 한시적  <u>무료</u>입니다.
+제주,,제주도립미술관,미술관,8000,제주도립미술관 관람안내,https://www.jeju.go.kr/jmoa/guide/viewing.htm,2026-11-19,"<td>8,000원</td>"
+대전,,대전시립미술관,미술관,500,대전시립미술관 관람안내,https://www.daejeon.go.kr/dma/dmaContentsHtmlView.do?menuSeq=6079,2026-11-19,<td>500원</td>
+서울,,N서울타워 전망대,전망대,29000,N서울타워 이용요금,https://www.nseoultower.co.kr/visit/use2.asp,2026-11-19,"<td><p>\29,000</p></td>"
+경남,통영,통영 한려수도 조망 케이블카,케이블카,17000,통영관광개발공사 케이블카 이용안내,http://cablecar.ttdc.kr/sub02/sub02_01.php,2026-11-19,"<td>17,000</td>"
+전남,여수,여수 해상케이블카,케이블카,17000,여수해상케이블카 누리집,http://www.yeosucablecar.com/,2026-11-19,"<td>17,000원</td>"
+부산,,송도해상케이블카,케이블카,19000,부산에어크루즈 누리집,https://www.busanaircruise.co.kr/,2026-11-19,"<span>대인</span> 19,000원"
+제주,,아쿠아플라넷 제주,수족관,45500,아쿠아플라넷 제주 이용요금,https://www.aquaplanet.co.kr/jeju/information/use_price.do,2026-11-19,"<!--35,000-->45,500원"
+전남,여수,아쿠아플라넷 여수,수족관,37900,아쿠아플라넷 여수 이용요금,https://www.aquaplanet.co.kr/yeosu/information/use_price.do,2026-11-19,"<span>37,900원</span>"
+서울,,코엑스아쿠아리움,수족관,35000,씨라이프 코엑스아쿠아리움 누리집,https://www.coexaqua.com/,2026-11-19,"입장권 50% 할인 17,500원 (정상가 35,000원)"
+경북,경주,경주월드,테마파크,54000,경주월드 이용요금,https://www.gjw.co.kr/Contents/contents.php?cmsNo=DA0300,2026-11-19,"54,000<span>원</span>"
+경북,경주,불국사,사찰,0,불국사 관람시간 및 요금,https://www.bulguksa.or.kr/bbs/content.php?co_id=application,2026-11-19,2023년 5월 4일부터 관람료는 무료입니다.
+부산,,해동용궁사,사찰,0,해동용궁사 참배안내,http://www.yongkungsa.or.kr/bbs/content.php?co_id=8010,2026-11-19,<!--현재는 -->무료입니다.
+전남,,월출산국립공원,국립공원,0,국립공원공단 자주하는질문,https://www.knps.or.kr/front/portal/open/openList.do?tpmdGrpCd=TKBBS05&menuNo=8000586,2026-11-19,국립공원은 2007년 1월 1일자로 입장료가 폐지되었습니다.
+서울,,서울대공원 동물원,공원,5000,서울대공원 이용요금 및 시간,https://grandpark.seoul.go.kr/conts/contsView/ko/S001001001001.do,2026-11-19,"<td>5,000원</td>"
+전남,순천,순천만국가정원,공원,10000,순천만국가정원·순천만습지 누리집,https://scbay.suncheon.go.kr/,2026-11-19,"<li>정원: 성인 10,000원(야간 5,000원)</li>"

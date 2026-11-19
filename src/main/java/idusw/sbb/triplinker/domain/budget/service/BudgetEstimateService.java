@@ -3,6 +3,7 @@ package idusw.sbb.triplinker.domain.budget.service;
 import idusw.sbb.triplinker.domain.budget.BudgetCalculator;
 import idusw.sbb.triplinker.domain.budget.BudgetCalculator.Admission;
 import idusw.sbb.triplinker.domain.budget.BudgetCalculator.LodgingQuote;
+import idusw.sbb.triplinker.domain.budget.PriceResearch;
 import idusw.sbb.triplinker.domain.budget.RegionCode;
 import idusw.sbb.triplinker.domain.budget.RouteFacts;
 import idusw.sbb.triplinker.domain.budget.dto.BudgetEstimate;
@@ -22,6 +23,7 @@ import java.util.List;
 /**
  * 여행 한 건의 예상 예산 — 일정 · 입력값을 모으고(여기서만 외부 API 를 탄다) 계산은 BudgetCalculator 에 맡긴다.
  * 관광공사가 느리거나 죽어도 예외를 밖으로 내지 않는다. 그 항목만 「가정」 으로 내려간다.
+ * 입장료는 관광공사에 없으면 조사한 공개 요금 표(PriceResearch, 파일만 읽음)를 본다.
  */
 @Slf4j
 @Service
@@ -34,6 +36,7 @@ public class BudgetEstimateService {
 
     private final TravelPlanRepository planRepository;
     private final TourPriceService tourPriceService;
+    private final PriceResearch priceResearch;
 
     public BudgetEstimate estimate(Long planId) {
         TravelPlan plan = planRepository.findById(planId)
@@ -74,6 +77,8 @@ public class BudgetEstimateService {
                     log.warn("[budget] 이용요금 조회 실패: {}", e.getMessage());
                 }
             }
+            if (a == null) a = priceResearch.find(sido, plan.getDestination(), facts.tours().get(i));      // ② 조사한 공개 요금
+            if (a == null) a = priceResearch.estimate(sido, plan.getDestination(), facts.tours().get(i));  // ③ 같은 유형 범위
             if (a != null) known.add(a); else unknown++;
         }
 
@@ -83,6 +88,6 @@ public class BudgetEstimateService {
                 lodging, known, unknown,
                 facts.transitKm(), facts.transitFare(), facts.legs(),
                 form != null ? form.getBudget() : null,
-                tourPriceService.enabled()));
+                tourPriceService.enabled(), facts.walkLegs()));
     }
 }

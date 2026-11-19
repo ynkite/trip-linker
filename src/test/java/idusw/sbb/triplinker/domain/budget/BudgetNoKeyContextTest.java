@@ -41,6 +41,7 @@ class BudgetNoKeyContextTest {
                 .withBean(TravelPlanRepository.class, () -> repo)
                 .withBean(TourApiClient.class)
                 .withBean(TourPriceService.class)
+                .withBean(PriceResearch.class)
                 .withBean(BudgetEstimateService.class)
                 .run(ctx -> {
                     assertNull(ctx.getStartupFailure(), "문맥이 떠야 한다");

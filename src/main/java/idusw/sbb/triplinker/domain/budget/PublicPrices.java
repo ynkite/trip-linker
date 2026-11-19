@@ -5,9 +5,10 @@ import java.util.Map;
 /**
  * 공공 통계 단가 — 출처 · 기준일을 값 옆에 둔다. 값이 바뀌면 이 파일만 고친다.
  *
- * 2026-11-09 웹 조회값(크롬 ChatGPT · 제미나이 답)이고 원문 표는 직접 열어 보지 못했다.
- * 그래서 이 값으로 낸 항목은 화면에 「가정」 으로 나간다(회의 판결: 원문 미확인 값은 확정 기준값으로 쓰지 않는다).
- * 원문을 확인하면 출처 이름 끝의 「원문 미확인」 을 지우고 상태를 바꾼다.
+ * 식비 단가는 2026-11-19 에 참가격 원문 표에서 직접 읽었다. 유가 · 운임 단가는 아직 원문을 못 봐 「원문 미확인」 이다
+ * (오피넷은 대기열 · 스크립트로만 열리고, 운임은 대표 구간 환산이라).
+ * 원문 미확인 값으로 낸 항목은 화면에 「가정」 으로 나간다(회의 판결: 원문 미확인 값은 확정 기준값으로 쓰지 않는다).
+ * 식비도 최대값이 「관광지 식당 2배」 가정이라 「가정」 그대로다.
  */
 public final class PublicPrices {
 
@@ -22,13 +23,20 @@ public final class PublicPrices {
     public static final double KM_PER_LITER_GOOD = 14.0;
     public static final double KM_PER_LITER_BAD = 9.0;
 
-    /** 참가격 외식비 「김치찌개백반」 시도 평균(원). 웹 답이 엇갈려(서울 8,769 · 8,654) 세 시도 값을 모두 준 쪽을 쓴다. */
-    public static final Map<String, Long> MEAL_BY_SIDO = Map.of(
-            "서울", 8_654L,
-            "부산", 8_429L,
-            "제주", 9_625L);
-    public static final String MEAL_SOURCE = "한국소비자원 참가격 외식비 김치찌개백반(웹 조회값 · 원문 미확인)";
-    public static final String MEAL_AS_OF = "2026-11-09 조회";
+    /**
+     * 참가격 외식비 「김치찌개백반」 1인분 시도 평균(원), 2026년 10월.
+     * 원문 표(price.go.kr 외식비 가격 · 지역별)에서 직접 읽었다(2026-11-19). 세종은 표에 없다.
+     * 표의 「전남광주(광주)」 · 「전남광주(전남)」 은 광주 · 전남으로 둔다.
+     */
+    public static final Map<String, Long> MEAL_BY_SIDO = Map.ofEntries(
+            Map.entry("서울", 8_846L), Map.entry("광주", 9_100L), Map.entry("대구", 8_583L),
+            Map.entry("대전", 10_600L), Map.entry("부산", 8_429L), Map.entry("울산", 9_000L),
+            Map.entry("인천", 8_667L), Map.entry("강원", 9_000L), Map.entry("경기", 8_841L),
+            Map.entry("경남", 8_885L), Map.entry("경북", 9_000L), Map.entry("전남", 8_278L),
+            Map.entry("전북", 9_550L), Map.entry("충남", 9_600L), Map.entry("충북", 9_714L),
+            Map.entry("제주", 9_625L));
+    public static final String MEAL_SOURCE = "한국소비자원 참가격 외식비 김치찌개백반 2026년 10월";
+    public static final String MEAL_AS_OF = "2026-11-19 조회";
 
     /** 관광지 식당은 시내 백반보다 비싸다 — 1끼 최대 = 백반 × 2 (가정). */
     public static final double MEAL_TOURIST_FACTOR = 2.0;

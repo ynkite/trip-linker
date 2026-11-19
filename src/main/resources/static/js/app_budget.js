@@ -227,12 +227,15 @@ function _renderBudgetBasis(d) {
     const range = (a, b) => a === b ? _fmtWon(a) : _fmtWon(a) + ' ~ ' + _fmtWon(b);
     const rows = (d.items || []).map(i => {
         const missing = i.source === 'NOT_ESTIMATED';
-        const src = [i.sourceName, i.asOf].filter(x => x && x !== '-').join(' · ');
+        // 기준일(2026-11-19)이 하이픈에서 꺾이지 않게 한 덩어리로
+        const has = x => x && x !== '-';
+        const src = [has(i.sourceName) ? _escBasis(i.sourceName) : '',
+                     has(i.asOf) ? '<span class="bb-nw">' + _escBasis(i.asOf) + '</span>' : ''].filter(Boolean).join(' · ');
         return '<div class="bb-row">'
             + '<div class="bb-label">' + _escBasis(i.label)
             + '<span class="' + tagClass(i.source) + '">' + _escBasis(i.sourceLabel) + '</span></div>'
             + '<div class="bb-amt">' + (missing ? '미산정' : range(i.min, i.max)) + '</div>'
-            + '<div class="bb-basis">' + _escBasis(i.basis) + (src ? '<br>출처: ' + _escBasis(src) : '') + '</div>'
+            + '<div class="bb-basis">' + _escBasis(i.basis) + (src ? '<br>출처: ' + src : '') + '</div>'
             + '</div>';
     }).join('');
     el.innerHTML =

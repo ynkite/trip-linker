@@ -20,15 +20,16 @@ import java.util.regex.Pattern;
  * @param transitKm 이동 거리 합(km, 카카오 길찾기가 채운 값)
  * @param transitFare 이동 금액 합(원, 일정에 적힌 값)
  * @param legs      이동 구간 수
+ * @param walkLegs  그중 도보 구간 수(운임 0원)
  */
 public record RouteFacts(String stayName, int stayNights, List<String> tours,
-                         double transitKm, long transitFare, int legs) {
+                         double transitKm, long transitFare, int legs, int walkLegs) {
 
     private static final ObjectMapper OM = new ObjectMapper();
     private static final Pattern KM = Pattern.compile("([\\d.]+)\\s*km");
     private static final Pattern WON = Pattern.compile("₩([\\d,]+)");
 
-    public static final RouteFacts EMPTY = new RouteFacts(null, 0, List.of(), 0, 0, 0);
+    public static final RouteFacts EMPTY = new RouteFacts(null, 0, List.of(), 0, 0, 0, 0);
 
     /**
      * 체크아웃 줄인가 — 둘째 날부터, 그날 이동 줄을 뺀 첫 장소가 숙소면 전날 숙소에서 나서는 줄이다.
@@ -50,7 +51,7 @@ public record RouteFacts(String stayName, int stayNights, List<String> tours,
             JsonNode root = OM.readTree(routeJson);
             if (!root.isArray()) return EMPTY;
             String stay = null;
-            int nights = 0, legs = 0;
+            int nights = 0, legs = 0, walk = 0;
             double km = 0;
             long fare = 0;
             List<String> tours = new ArrayList<>();
@@ -67,6 +68,7 @@ public record RouteFacts(String stayName, int stayNights, List<String> tours,
                         if (k.find()) km += Double.parseDouble(k.group(1));
                         if (w.find()) fare += Long.parseLong(w.group(1).replace(",", ""));
                         legs++;
+                        if (t.contains("도보")) walk++;
                         continue;
                     }
                     String type = p.path("type").asText("");
@@ -79,7 +81,7 @@ public record RouteFacts(String stayName, int stayNights, List<String> tours,
                     }
                 }
             }
-            return new RouteFacts(stay, nights, tours, Math.round(km * 10) / 10.0, fare, legs);
+            return new RouteFacts(stay, nights, tours, Math.round(km * 10) / 10.0, fare, legs, walk);
         } catch (Exception e) {
             return EMPTY;
         }

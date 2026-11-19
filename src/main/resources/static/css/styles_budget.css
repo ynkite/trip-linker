@@ -167,4 +167,5 @@
 .bb-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-left: 6px; border: 1px solid var(--border); color: var(--text2); }
 .bb-tag.live { border-color: var(--sage); color: var(--sage-d); }
 .bb-tag.none { border-style: dashed; color: var(--text3); }
+.bb-nw { white-space: nowrap; }
 .bb-foot { font-size: 11px; color: var(--text3); margin-top: 10px; line-height: 1.6; word-break: keep-all; }

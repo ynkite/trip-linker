@@ -35,6 +35,8 @@ public record BudgetEstimate(
     public enum Source {
         PUBLIC_RATE("확인된 공개 요금"),       // 관광공사 숙소 객실 요금 · 관광지 이용요금
         STAT_ESTIMATE("통계 기반 추정"),       // 관광공사 같은 지역 숙소 표본
+        RESEARCHED("조사한 공개 요금"),        // 공식 누리집 · 지자체 · 공공기관 안내에서 읽은 금액(출처 주소 · 조회일은 price_research.csv)
+        RESEARCH_ESTIMATE("조사 추정"),        // 같은 유형 조사값의 최저~최고
         ASSUMED("가정"),                       // 원문을 확인 못 한 단가 · 우리가 정한 범위
         NOT_ESTIMATED("미산정");               // 근거가 없어 계산하지 않음 — 합계 제외
 

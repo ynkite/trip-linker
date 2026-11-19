@@ -100,7 +100,7 @@ class BudgetCalculatorTest {
         Item food = item(e, "FOOD");
         assertEquals(9_625L * 7 * 2, food.min());     // 제주 백반 × 7끼(3일×3−2) × 2명 = 134,750
         assertEquals(19_250L * 7 * 2, food.max());    // × 2배 = 269,500
-        assertEquals(Source.ASSUMED, food.source(), "원문 미확인 통계는 가정");
+        assertEquals(Source.ASSUMED, food.source(), "최대값이 관광지 식당 2배 가정이라 가정");
         Item car = byLabel(e, "현지 이동");
         assertEquals(Math.round(100 / 14.0 * 1_855), car.min());   // 13,250
         assertEquals(Math.round(100 / 9.0 * 1_855), car.max());    // 20,611
@@ -165,23 +165,23 @@ class BudgetCalculatorTest {
     void dayTripHasNoLodging() {
         BudgetEstimate e = BudgetCalculator.compute(input("서울", 0, 2, null, 0));
         assertTrue(e.items().stream().noneMatch(i -> i.category().equals("STAY")));
-        assertEquals(8_654L * 2 * 2, item(e, "FOOD").min());
+        assertEquals(8_846L * 2 * 2, item(e, "FOOD").min());    // 참가격 2026년 10월 서울
         assertEquals(Source.NOT_ESTIMATED, byLabel(e, "현지 이동").source());
-        assertEquals(34_616, e.min());
-        assertEquals(69_232, e.max());
+        assertEquals(35_384, e.min());
+        assertEquals(70_768, e.max());
         assertEquals(1, e.missing());
     }
 
     @Test
-    @DisplayName("6인 3박 강원 — 방 3개 × 3박, 모르는 시도 식비는 세 시도 범위")
+    @DisplayName("6인 3박 강원 — 방 3개 × 3박, 강원 식비는 참가격 강원 평균")
     void sixPeopleNeedThreeRooms() {
         LodgingQuote q = new LodgingQuote(80_000, 100_000, Source.STAT_ESTIMATE, "표본", "관광공사", "-");
         BudgetEstimate e = BudgetCalculator.compute(input("강원", 3, 6, q, 80));
         assertTrue(item(e, "STAY").label().contains("방 3개"));
         assertEquals(80_000L * 3 * 3, item(e, "STAY").min());
         assertEquals(100_000L * 3 * 3, item(e, "STAY").max());
-        assertEquals(8_429L * 10 * 6, item(e, "FOOD").min());    // 4일 = 10끼
-        assertEquals(19_250L * 10 * 6, item(e, "FOOD").max());
+        assertEquals(9_000L * 10 * 6, item(e, "FOOD").min());    // 4일 = 10끼
+        assertEquals(18_000L * 10 * 6, item(e, "FOOD").max());
         assertEquals(3, BudgetCalculator.rooms(5));
         assertEquals(1, BudgetCalculator.rooms(1));
         assertEquals(2, BudgetCalculator.mealCount(1));
@@ -278,11 +278,11 @@ class BudgetCalculatorTest {
     }
 
     @Test
-    @DisplayName("모르는 지역 — 식비는 서울 · 부산 · 제주 값의 최소~최대 범위")
+    @DisplayName("모르는 지역 — 식비는 참가격 시도 평균 16곳의 최소(전남 8,278)~최대(대전 10,600 × 2)")
     void unknownRegionUsesRangeOfThree() {
         BudgetEstimate e = BudgetCalculator.compute(input(null, 0, 1, null, 10));
-        assertEquals(8_429L * 2, item(e, "FOOD").min());
-        assertEquals(19_250L * 2, item(e, "FOOD").max());
+        assertEquals(8_278L * 2, item(e, "FOOD").min());
+        assertEquals(21_200L * 2, item(e, "FOOD").max());
     }
 
     @Test
@@ -297,5 +297,64 @@ class BudgetCalculatorTest {
         assertEquals("39", RegionCode.areaCode("제주"));
         assertEquals("6", RegionCode.areaCode("부산"));
         assertNull(RegionCode.areaCode(null));
+    }
+
+    @Test
+    @DisplayName("입장료 — 관광공사 · 조사한 공개 요금 · 조사 추정이 따로 줄로 나오고 각자 출처 · 조회일을 단다")
+    void admissionsSplitBySource() {
+        List<Admission> found = List.of(
+                new Admission("유료곳", 3_000, 3_000, Source.PUBLIC_RATE, "관광공사 이용요금 「성인 3,000원」"),
+                new Admission("해변열차", 7_000, 7_000, Source.RESEARCHED, "해변열차 7,000원", "부산 해운대구청", "2026-11-19 조회"),
+                new Admission("송정해수욕장", 0, 0, Source.RESEARCH_ESTIMATE, "해수욕장 조사값 2곳 0~0원", "조사한 공개 요금(유형별 범위)", "2026-11-19 조회"));
+        BudgetEstimate e = BudgetCalculator.compute(new Input("부산", null, 0, 1, 2, true, null, found, 1, 10, 0, 1, null, true));
+        Item pub = byLabel(e, "요금 확인");
+        assertEquals(Source.PUBLIC_RATE, pub.source());
+        assertEquals(6_000, pub.min());
+        Item res = byLabel(e, "요금 조사");
+        assertEquals(Source.RESEARCHED, res.source());
+        assertEquals(14_000, res.min());
+        assertEquals("부산 해운대구청", res.sourceName());
+        assertEquals("2026-11-19 조회", res.asOf());
+        assertTrue(res.basis().contains("해변열차 7,000원"), res.basis());
+        Item est = byLabel(e, "유형별 추정");
+        assertEquals(Source.RESEARCH_ESTIMATE, est.source());
+        assertEquals("조사 추정", est.sourceLabel());
+        assertEquals(Source.NOT_ESTIMATED, byLabel(e, "요금 모름 1곳").source());
+        assertEquals(1, e.missing());
+    }
+
+    @Test
+    @DisplayName("대중교통 일정의 이동이 모두 도보면 현지 이동은 0원(미산정 아님)")
+    void allWalkingIsZeroNotMissing() {
+        String route = """
+                [{"day":1,"places":[
+                  {"type":"tour","name":"가"},
+                  {"transit":"🚶 도보 · 0.5km · 약 8분 · ₩0"},
+                  {"type":"food","name":"나"},
+                  {"transit":"🚶 도보 · 0.9km · 약 14분 · ₩0"},
+                  {"type":"tour","name":"다"}]}]""";
+        RouteFacts f = RouteFacts.parse(route);
+        assertEquals(2, f.legs());
+        assertEquals(2, f.walkLegs());
+        BudgetEstimate e = BudgetCalculator.compute(new Input("대전", null, 0, 1, 1, false, null, List.of(), 0,
+                f.transitKm(), f.transitFare(), f.legs(), null, true, f.walkLegs()));
+        Item t = byLabel(e, "현지");
+        assertNotEquals(Source.NOT_ESTIMATED, t.source());
+        assertEquals(0, t.min());
+        assertEquals(0, t.max());
+        assertTrue(t.basis().contains("도보"), t.basis());
+        assertEquals(0, e.missing());
+    }
+
+    @Test
+    @DisplayName("대중교통 기본요금 하한은 도보 구간을 빼고 센다")
+    void walkLegsHaveNoBaseFare() {
+        // 4구간 중 도보 2 · 대중교통 2(운임 합 6,000원), 2명 → 기본요금 하한 2구간 × 2명 × 1,500 = 6,000
+        BudgetEstimate e = BudgetCalculator.compute(new Input("대구", null, 0, 1, 2, false, null, List.of(), 0,
+                9.0, 6_000, 4, null, true, 2));
+        Item t = byLabel(e, "현지 대중교통");
+        assertEquals(6_000, t.min());
+        assertEquals(6_000, t.max());
+        assertTrue(t.basis().contains("도보 2구간 제외"), t.basis());
     }
 }
