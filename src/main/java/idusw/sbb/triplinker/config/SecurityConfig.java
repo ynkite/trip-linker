@@ -41,14 +41,12 @@ public class SecurityConfig {
     // 카메라 · 마이크 · 위치 · 결제를 쓰지 않으므로 모두 끈다 (화면 코드에 geolocation 호출 0건)
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
 
-    // 바로 적용하는 CSP — 화면을 깨뜨릴 수 없는 항목만: 플러그인(object) 금지, <base> 바꿔치기 금지, 다른 사이트의 iframe 안에 넣기 금지
-    static final String CSP_ENFORCED = "object-src 'none'; base-uri 'self'; frame-ancestors 'self'";
-
-    // 전체 CSP 는 먼저 Report-Only(위반을 막지 않고 브라우저 콘솔에만 알림)로 둔다.
-    // 화면이 onclick 같은 인라인 스크립트를 수백 곳에서 써서 'unsafe-inline' 을 아직 뺄 수 없고,
-    // 카카오 지도 SDK 가 키에 따라 받는 주소(t1.daumcdn.net, 지도 타일 등)를 운영 키로 직접 확인하지 못했다.
-    // 운영에서 콘솔 위반이 0 이면 이름을 Content-Security-Policy 로 바꿔 적용한다.
-    static final String CSP_REPORT_ONLY = String.join("; ",
+    // CSP 를 실제로 적용한다(Report-Only 로 시험한 정책 그대로 + 카카오톡 공유).
+    // 운영 화면에서 강제 적용으로 바꿔 확인한 것: 지도 · 장소 찾기 · 테스트 로그인 · 커뮤니티 · 날씨 · 가계부 PDF · 카카오톡 공유가 그대로 된다.
+    // - 'unsafe-inline' 은 아직 못 뺀다: 화면이 onclick 같은 인라인 스크립트를 수백 곳에서 쓴다
+    // - 'unsafe-eval' 은 넣지 않는다: 카카오 지도 스크립트가 eval 을 한 번 시도하다 막히지만 지도는 그대로 그려진다
+    // - form-action 에 카카오: 카카오톡 공유 SDK 가 sharer.kakao.com 으로 폼을 보내고 로그인(accounts.kakao.com)으로 넘긴다
+    static final String CSP = String.join("; ",
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' https://dapi.kakao.com https://t1.daumcdn.net https://t1.kakaocdn.net https://cdnjs.cloudflare.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -59,7 +57,7 @@ public class SecurityConfig {
             "object-src 'none'",
             "base-uri 'self'",
             "frame-ancestors 'self'",
-            "form-action 'self'");
+            "form-action 'self' https://*.kakao.com");
 
     //비밀번호 암호화 도구 등록
     @Bean
@@ -144,8 +142,7 @@ public class SecurityConfig {
                 .headers(h -> h
                         .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", PERMISSIONS_POLICY))
-                        .addHeaderWriter(new StaticHeadersWriter("Content-Security-Policy", CSP_ENFORCED))
-                        .addHeaderWriter(new StaticHeadersWriter("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY))
+                        .addHeaderWriter(new StaticHeadersWriter("Content-Security-Policy", CSP))
                 )
 
                 // Spring Security의 기본 인증 필터가 동작하기 전에, 커스텀 JWT 필터가 먼저 토큰을 검증하도록 설정

@@ -108,8 +108,15 @@ class SecurityConfigWebTest {
         mvc.perform(get("/"))
                 .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"))
                 .andExpect(header().exists("Permissions-Policy"))
-                .andExpect(header().exists("Content-Security-Policy"))
-                .andExpect(header().exists("Content-Security-Policy-Report-Only"))
+                // 전체 CSP 를 실제로 적용한다(시험 기간의 Report-Only 는 내림). 카카오톡 공유는 카카오로 폼을 보내므로 form-action 에 카카오
+                .andExpect(header().string("Content-Security-Policy", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("default-src 'self'"),
+                        org.hamcrest.Matchers.containsString("script-src 'self'"),
+                        org.hamcrest.Matchers.containsString("object-src 'none'"),
+                        org.hamcrest.Matchers.containsString("frame-ancestors 'self'"),
+                        org.hamcrest.Matchers.containsString("form-action 'self' https://*.kakao.com"),
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("unsafe-eval")))))
+                .andExpect(header().doesNotExist("Content-Security-Policy-Report-Only"))
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"));
     }
 
