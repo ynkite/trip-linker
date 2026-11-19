@@ -1247,6 +1247,8 @@
 
 .place-card-item {
     display: flex;
+    flex-wrap: wrap;          /* 좁은 화면에서는 별점 줄이 이름 아래로 내려간다 */
+    gap: 6px 10px;
     align-items: center;
     justify-content: space-between;
     padding: 14px 18px;
@@ -1265,7 +1267,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    flex: 1;
+    flex: 1 1 140px;
     min-width: 0;
 }
 .place-card-icon {

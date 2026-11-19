@@ -257,9 +257,11 @@ table {
     .budget-layout,
     .comm-layout,
     .admin-layout {
-        grid-template-columns: 1fr;
+        /* minmax(0, …): 안의 긴 카드가 칸을 화면보다 넓히지 않게(휴대폰 커뮤니티 가로 넘침) */
+        grid-template-columns: minmax(0, 1fr);
         gap: 16px;
     }
+    .comm-tab { padding: 6px 10px; }
 
     /* hsc-cards / top3-grid / popular-grid → styles_responsive_main.css */
     /* chip-grid4 / stats-grid / prev-stats-row → styles_responsive_mypage.css */

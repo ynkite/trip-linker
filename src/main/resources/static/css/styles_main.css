@@ -3719,6 +3719,7 @@ nav {
 }
 
 .comm-tab {
+    white-space: nowrap;
     padding: 6px 14px;
     border-radius: 6px;
     font-size: 13px;
