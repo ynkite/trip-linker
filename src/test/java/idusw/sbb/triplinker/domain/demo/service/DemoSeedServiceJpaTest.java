@@ -159,20 +159,22 @@ class DemoSeedServiceJpaTest {
     }
 
     @Test
-    @DisplayName("대표 일정(부산)에는 플래너 3단계에서 되살릴 예시 대화(USER · AI 번갈아)가 있고, 되돌리면 하나만 남는다")
+    @DisplayName("대표 일정(부산) · 다가오는 대구에는 플래너 3단계에서 되살릴 예시 대화(USER · AI 번갈아)가 있고, 되돌리면 하나만 남는다")
     void showcaseTripHasChatHistory() {
         seedService.reset(demo.getId(), TODAY);
         seedService.reset(demo.getId(), TODAY);
 
-        Long busanId = plan("부산").getId();
-        List<idusw.sbb.triplinker.domain.chat.entity.ChatSession> sessions = em.createQuery(
-                "SELECT s FROM ChatSession s WHERE s.planId = :id", idusw.sbb.triplinker.domain.chat.entity.ChatSession.class)
-                .setParameter("id", busanId).getResultList();
-        assertThat(sessions).hasSize(1);
-        List<String> roles = em.createQuery(
-                "SELECT m.role FROM ChatMessage m WHERE m.chatSession.id = :sid ORDER BY m.id", String.class)
-                .setParameter("sid", sessions.get(0).getId()).getResultList();
-        assertThat(roles).hasSizeGreaterThanOrEqualTo(4).startsWith("USER", "AI");
+        // 부산(대표 일정)과 다가오는 대구(플래너 2 · 3단계를 열 수 있는 일정)
+        for (String dest : List.of("부산", "대구")) {
+            List<idusw.sbb.triplinker.domain.chat.entity.ChatSession> sessions = em.createQuery(
+                    "SELECT s FROM ChatSession s WHERE s.planId = :id", idusw.sbb.triplinker.domain.chat.entity.ChatSession.class)
+                    .setParameter("id", plan(dest).getId()).getResultList();
+            assertThat(sessions).as(dest).hasSize(1);
+            List<String> roles = em.createQuery(
+                    "SELECT m.role FROM ChatMessage m WHERE m.chatSession.id = :sid ORDER BY m.id", String.class)
+                    .setParameter("sid", sessions.get(0).getId()).getResultList();
+            assertThat(roles).as(dest).hasSizeGreaterThanOrEqualTo(4).startsWith("USER", "AI");
+        }
     }
 
     @Test
