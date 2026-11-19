@@ -86,6 +86,7 @@
          * GET /api/trips/latest-preference
          * ───────────────────────────────────────────────────────── */
         async function loadPreviousPreference() {
+            if (typeof _loggedIn !== 'undefined' && !_loggedIn) { toast('⚠️ 로그인이 필요합니다.'); go('login'); return; }
             try {
                 const res = await fetch('/api/trips/latest-preference', {
                     headers: { 'Authorization': 'Bearer ' + (Token.getAccess() || '') }

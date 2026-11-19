@@ -107,6 +107,10 @@ public class TravelPlanController {
     @GetMapping("/latest-preference")
     public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getLatestPreference(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
+        // 공유 링크용 GET /api/trips/* 공개 규칙에 같이 걸려 로그인 없이도 여기까지 온다 → 500 대신 401
+        if (userDetails == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).body(ApiResponse.error("로그인이 필요합니다."));
+        }
         java.util.Map<String, Object> result = travelPlanService.getLatestPreference(userDetails.getUserId());
         return ResponseEntity.ok(ApiResponse.success(result));
     }
