@@ -2841,7 +2841,7 @@ async function _restoreChatForTrip(tripId) {
     const msgs = document.getElementById('chatMsgs');
     if (!msgs) return;
     try {
-        const listRes = await api.get('/api/chat/sessions');
+        const listRes = await api.get('/api/chat/sessions?planId=' + encodeURIComponent(tripId));
         const sessions = (listRes && listRes.success && Array.isArray(listRes.data)) ? listRes.data : [];
 
         let target = sessions.find(s => String(s.planId) === String(tripId));

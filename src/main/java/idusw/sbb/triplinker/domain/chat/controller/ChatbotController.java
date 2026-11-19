@@ -56,6 +56,17 @@ public class ChatbotController {
         ));
     }
 
+    // 플래너를 다시 열 때 대화 되살리기 (GET /api/chat/sessions?planId=, GET /api/chat/sessions/{id})
+    @GetMapping("/sessions")
+    public ResponseEntity<?> listSessions(@AuthenticationPrincipal CustomUserDetails user, @RequestParam Long planId) {
+        return ResponseEntity.ok(Map.of("success", true, "data", chatbotService.listSessions(uid(user), planId)));
+    }
+
+    @GetMapping("/sessions/{sessionId}")
+    public ResponseEntity<?> getSession(@AuthenticationPrincipal CustomUserDetails user, @PathVariable Long sessionId) {
+        return ResponseEntity.ok(Map.of("success", true, "data", chatbotService.getSession(uid(user), sessionId)));
+    }
+
     private static Long uid(CustomUserDetails user) {
         return user != null ? user.getUserId() : null;
     }

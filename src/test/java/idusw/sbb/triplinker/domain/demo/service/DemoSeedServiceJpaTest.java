@@ -159,6 +159,23 @@ class DemoSeedServiceJpaTest {
     }
 
     @Test
+    @DisplayName("대표 일정(부산)에는 플래너 3단계에서 되살릴 예시 대화(USER · AI 번갈아)가 있고, 되돌리면 하나만 남는다")
+    void showcaseTripHasChatHistory() {
+        seedService.reset(demo.getId(), TODAY);
+        seedService.reset(demo.getId(), TODAY);
+
+        Long busanId = plan("부산").getId();
+        List<idusw.sbb.triplinker.domain.chat.entity.ChatSession> sessions = em.createQuery(
+                "SELECT s FROM ChatSession s WHERE s.planId = :id", idusw.sbb.triplinker.domain.chat.entity.ChatSession.class)
+                .setParameter("id", busanId).getResultList();
+        assertThat(sessions).hasSize(1);
+        List<String> roles = em.createQuery(
+                "SELECT m.role FROM ChatMessage m WHERE m.chatSession.id = :sid ORDER BY m.id", String.class)
+                .setParameter("sid", sessions.get(0).getId()).getResultList();
+        assertThat(roles).hasSizeGreaterThanOrEqualTo(4).startsWith("USER", "AI");
+    }
+
+    @Test
     @DisplayName("지난 여행도 가계부 예상 총액이 0 이 아니다(떠나기 전에 낸 예상 금액과 실제 지출이 함께 있다)")
     void everyTripHasEstimatedAmount() {
         seedService.reset(demo.getId(), TODAY);

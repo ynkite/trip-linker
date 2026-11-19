@@ -3,6 +3,8 @@ package idusw.sbb.triplinker.domain.demo.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import idusw.sbb.triplinker.domain.chat.entity.ChatMessage;
+import idusw.sbb.triplinker.domain.chat.entity.ChatSession;
 import idusw.sbb.triplinker.domain.expense.entity.Expense;
 import idusw.sbb.triplinker.domain.place.entity.Place;
 import idusw.sbb.triplinker.domain.plan.entity.PlanInputForm;
@@ -246,6 +248,21 @@ public class DemoSeedService {
                 }
             }
             plans.put(trip.key(), plan);
+
+            List<String[]> chat = DemoSeedData.CHATS.get(trip.key());
+            if (chat != null) {
+                ChatSession session = new ChatSession();
+                session.setTitle(trip.title());
+                session.setPlanId(plan.getId());
+                em.persist(session);
+                for (String[] m : chat) {
+                    ChatMessage msg = new ChatMessage();
+                    msg.setChatSession(session);
+                    msg.setRole(m[0]);
+                    msg.setContent(m[1]);
+                    em.persist(msg);
+                }
+            }
         }
 
         for (Object[] row : DemoSeedData.EXTRA_EXPENSES) {

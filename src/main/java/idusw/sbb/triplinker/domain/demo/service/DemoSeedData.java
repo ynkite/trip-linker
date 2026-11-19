@@ -2,6 +2,7 @@ package idusw.sbb.triplinker.domain.demo.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 테스트 유저에게 넣는 예시 데이터(고정값).
@@ -126,6 +127,16 @@ final class DemoSeedData {
             {"sokcho", 0, "CAFE", "속초해수욕장 근처 카페", 18_000L},
             {"sokcho", 1, "FOOD", "동명항 근처 간식", 9_000L},
     };
+
+    /** 플래너 3단계(AI 챗봇)에서 되살아나는 예시 대화. {역할(USER/AI), 내용}. AI 를 부르지 않고 넣어 둔 글이다. */
+    static final Map<String, List<String[]>> CHATS = Map.of(
+            "busan", List.of(
+                    new String[]{"USER", "해운대랑 광안리 위주로 1박 2일 생각하고 있어요. 둘이서 대중교통으로 다닐 거예요."},
+                    new String[]{"AI", "좋아요. 첫날은 미포에서 해변열차를 타고 해운대해수욕장을 지나 동백섬까지 서쪽으로 걷는 동선으로 잡고, "
+                            + "숙소는 동백섬 입구 쪽에 두면 둘째 날 수영강을 건너 광안리로 가기 편해요. 식사 취향이 있으세요?"},
+                    new String[]{"USER", "점심은 고기, 저녁은 바다 보이는 곳이면 좋겠어요."},
+                    new String[]{"AI", "점심은 해운대암소갈비집, 저녁은 더베이101 안 핑거스앤챗으로 넣어 마린시티 야경을 보며 드실 수 있게 할게요. "
+                            + "예산 70만 원 안에서 숙박비를 먼저 잡고 나머지를 식비 · 교통비로 나눠 보여 드릴게요."}));
 
     /** 테스트 유저가 스크랩해 둔 장소(다가오는 여행에서 갈 곳). */
     static final List<String> PLACE_SCRAPS = List.of("성심당 본점", "서문시장", "김광석다시그리기길");

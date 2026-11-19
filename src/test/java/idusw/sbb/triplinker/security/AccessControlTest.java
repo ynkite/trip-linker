@@ -426,6 +426,43 @@ class AccessControlTest {
             mvc.perform(post("/api/chat/sessions").contentType(MediaType.APPLICATION_JSON)
                     .content("{\"planId\":10}")).andExpect(status().isOk());
         }
+
+        private void givenHistory() {
+            ChatSession s = sessionRepo.findById(77L).orElseThrow();
+            when(sessionRepo.findByPlanIdOrderByIdAsc(TRIP)).thenReturn(List.of(s));
+            idusw.sbb.triplinker.domain.chat.entity.ChatMessage u = new idusw.sbb.triplinker.domain.chat.entity.ChatMessage();
+            u.setRole("USER"); u.setContent("바다 보이는 숙소면 좋겠어요"); u.setChatSession(s);
+            idusw.sbb.triplinker.domain.chat.entity.ChatMessage sys = new idusw.sbb.triplinker.domain.chat.entity.ChatMessage();
+            sys.setRole("SYSTEM"); sys.setContent("[시스템 메시지: 예산 변경]"); sys.setChatSession(s);
+            idusw.sbb.triplinker.domain.chat.entity.ChatMessage ai = new idusw.sbb.triplinker.domain.chat.entity.ChatMessage();
+            ai.setRole("AI"); ai.setContent("해운대 쪽 숙소로 잡아 볼게요"); ai.setChatSession(s);
+            when(messageRepo.findByChatSessionOrderByIdAsc(s)).thenReturn(List.of(u, sys, ai));
+        }
+
+        @Test
+        @DisplayName("정상: 주인은 여행을 다시 열 때 그 여행의 대화를 읽는다(숨은 SYSTEM 메시지는 빼고)")
+        void ownerReadsHistory() throws Exception {
+            givenHistory();
+            loginAs(OWNER);
+            mvc.perform(get("/api/chat/sessions").param("planId", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data[0].sessionId").value(77))
+                    .andExpect(jsonPath("$.data[0].planId").value(10));
+            mvc.perform(get("/api/chat/sessions/77"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.messages.length()").value(2))
+                    .andExpect(jsonPath("$.data.messages[0].role").value("USER"))
+                    .andExpect(jsonPath("$.data.messages[1].content").value("해운대 쪽 숙소로 잡아 볼게요"));
+        }
+
+        @Test
+        @DisplayName("다른 회원은 남의 여행 대화 목록 · 내용을 읽을 수 없다")
+        void otherCannotReadHistory() throws Exception {
+            givenHistory();
+            loginAs(OTHER);
+            mvc.perform(get("/api/chat/sessions").param("planId", "10")).andExpect(status().isForbidden());
+            mvc.perform(get("/api/chat/sessions/77")).andExpect(status().isForbidden());
+        }
     }
 
     // ───────────────────────── 회원 정보 ─────────────────────────

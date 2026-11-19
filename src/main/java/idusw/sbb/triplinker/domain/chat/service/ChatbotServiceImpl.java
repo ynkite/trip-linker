@@ -340,6 +340,32 @@ public class ChatbotServiceImpl implements ChatbotService {
     }
 
 
+    // 플래너를 다시 열 때 대화를 되살린다. 읽기만 하므로 멤버면 된다(쓰기는 loadOwnSession 의 편집자 확인 그대로)
+    @Override
+    @Transactional(readOnly = true)
+    public List<java.util.Map<String, Object>> listSessions(Long userId, Long planId) {
+        if (planId == null) throw new IllegalArgumentException("여행 번호가 필요합니다.");
+        tripAccessGuard.requireMember(planId, userId);
+        return sessionRepository.findByPlanIdOrderByIdAsc(planId).stream()
+                .map(s -> java.util.Map.<String, Object>of("sessionId", s.getId(), "planId", planId))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> getSession(Long userId, Long sessionId) {
+        ChatSession session = sessionRepository.findById(sessionId == null ? -1L : sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 대화방입니다."));
+        // 여행이 없는 방은 주인을 확인할 수 없어 내주지 않는다
+        if (session.getPlanId() == null) throw new IllegalArgumentException("존재하지 않는 대화방입니다.");
+        tripAccessGuard.requireMember(session.getPlanId(), userId);
+        List<java.util.Map<String, Object>> messages = messageRepository.findByChatSessionOrderByIdAsc(session).stream()
+                .filter(m -> "USER".equals(m.getRole()) || "AI".equals(m.getRole()))
+                .map(m -> java.util.Map.<String, Object>of("role", m.getRole(), "content", m.getContent() == null ? "" : m.getContent()))
+                .toList();
+        return java.util.Map.of("sessionId", session.getId(), "planId", session.getPlanId(), "messages", messages);
+    }
+
     private ChatSession loadOwnSession(Long userId, Long sessionId) {
         if (sessionId == null) throw new IllegalArgumentException("존재하지 않는 대화방입니다.");
         ChatSession session = sessionRepository.findById(sessionId)

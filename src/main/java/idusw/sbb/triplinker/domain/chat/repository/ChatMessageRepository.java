@@ -8,4 +8,7 @@ import java.util.List;
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
     // 최신 대화 기록을 10개만 가져옴
     List<ChatMessage> findTop10ByChatSessionOrderByIdDesc(ChatSession chatSession);
+
+    // 대화 전체(보낸 순)
+    List<ChatMessage> findByChatSessionOrderByIdAsc(ChatSession chatSession);
 }
