@@ -958,26 +958,6 @@
     })();
   </script>
 
-  <!-- 정지 모달 전용 스타일 -->
-  <style>
-    .sus-wrap {background:var(--surface);border-radius:16px;padding:28px 28px 24px;width:420px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.14);}
-    .sus-hd   {display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
-    .sus-ttl  {font-size:17px;font-weight:800;color:var(--text1);display:flex;align-items:center;gap:8px;}
-    .sus-info {background:var(--cream2);border-radius:10px;padding:12px 16px;margin-bottom:18px;}
-    .sus-row  {display:flex;gap:16px;font-size:13px;margin-top:4px;}
-    .sus-lbl  {color:var(--text3);min-width:56px;}
-    .sus-val  {color:var(--text1);font-weight:600;}
-    .sus-notif{background:#FFFBEB;border:1px solid #FEF3C7;border-radius:10px;padding:14px 16px;margin:14px 0;}
-    .sus-n-ttl{font-size:12px;font-weight:700;color:#92400E;margin-bottom:4px;}
-    .sus-n-sub{font-size:11px;color:#B45309;margin-bottom:8px;}
-    .sus-n-ta {width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;color:var(--text1);resize:none;outline:none;min-height:44px;}
-    .sus-guide{background:var(--cream2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text3);line-height:1.65;margin-bottom:16px;}
-    .sus-foot {display:flex;gap:10px;}
-    .btn-sus-ok{flex:1;background:var(--coral);color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;}
-    .btn-sus-ok:hover{filter:brightness(.92);}
-    .btn-sus-cl{flex:0 0 80px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2);}
-    .btn-sus-cl:hover{background:var(--cream2);}
-  </style>
 
   <div class="page" id="page-admin">
     <div class="admin-layout">
@@ -1055,7 +1035,7 @@
             </select>
           </div>
           <table class="admin-table">
-            <thead><tr></tr></thead>
+            <thead><tr><th>ID</th><th>아이디</th><th>이름</th><th>이메일</th><th>가입일</th><th>상태</th><th>관리</th><th>전환</th></tr></thead>
             <tbody id="adminUserTable"></tbody>
           </table>
           <div id="admin-user-pagination"></div>
@@ -1076,7 +1056,7 @@
             </select>
           </div>
           <table class="admin-table">
-            <thead><tr></tr></thead>
+            <thead><tr><th>ID</th><th>게시글</th><th>신고자</th><th>작성자</th><th>사유</th><th>상태</th><th>처리</th></tr></thead>
             <tbody id="adminReportTable"></tbody>
           </table>
           <div id="admin-report-pagination"></div>
@@ -1207,7 +1187,7 @@
           </div>
 
           <table class="admin-table" style="margin-top:20px">
-            <thead><tr></tr></thead>
+            <thead><tr><th>ID</th><th>제목</th><th>테마</th><th>순서</th><th>노출 기간</th><th>관리</th></tr></thead>
             <tbody id="curationTable"></tbody>
           </table>
         </div>

@@ -230,54 +230,6 @@
         </div>
     </div>
 
-
-    <!-- =====================================================
-         여행 플랜 공유 모달  (shareModal)
-         ===================================================== -->
-    <div class="overlay" id="shareModal"
-         onclick="if(event.target===this)this.classList.remove('open')">
-        <div class="modal" style="width:440px; padding:24px 28px;">
-            <div class="modal-hd" style="border-bottom:none; padding-bottom:0; margin-bottom:16px;">
-                <h2 style="font-size:18px; font-weight:800; display:flex; align-items:center; gap:6px;">
-                    🔗 여행 플랜 공유
-                </h2>
-                <button class="modal-x" onclick="this.closest('.overlay').classList.remove('open')">✕</button>
-            </div>
-
-            <div style="display:flex; gap:16px; border-bottom:1px solid var(--border2); margin-bottom:20px;">
-                <button class="share-tab on" onclick="setShareTab(this, 'members')" style="padding:0 4px 10px; font-size:14px; font-weight:700; color:var(--sage-d); border-bottom:3px solid var(--sage); cursor:pointer; background:none; border-top:none; border-left:none; border-right:none;">공유</button>
-                <button class="share-tab" onclick="setShareTab(this, 'post')" style="padding:0 4px 10px; font-size:14px; font-weight:700; color:var(--text3); cursor:pointer; background:none; border:none;">게시</button>
-            </div>
-
-            <div id="share-members">
-                <div style="display:flex; gap:8px; margin-bottom:24px;">
-                    <input type="email" id="share-email-inp" placeholder="이메일로 그룹 멤버 초대 (편집 권한)" style="flex:1; background:var(--cream); border:none; border-radius:6px; padding:12px 14px; font-size:13px; outline:none;">
-                    <button onclick="inviteShareMember()" style="background:var(--sage); color:#fff; border:none; border-radius:6px; padding:0 20px; font-weight:700; font-size:13px; cursor:pointer;">초대</button>
-                </div>
-
-                <div id="share-member-list" style="display:flex; flex-direction:column; gap:16px; margin-bottom:30px; min-height:60px;">
-                </div>
-
-                <div style="font-size:11px; font-weight:700; color:var(--text3); margin-bottom:8px;">읽기 전용 링크 복사</div>
-                <div style="display:flex; gap:8px; background:var(--cream); padding:6px; border-radius:8px;">
-                    <input type="text" id="share-link-url" readonly style="flex:1; background:none; border:none; padding:4px 8px; font-size:13px; color:var(--text2); outline:none;">
-                    <button onclick="doShareLinkCopy()" style="background:var(--sage); color:#fff; border:none; border-radius:6px; padding:10px 16px; font-weight:700; font-size:13px; cursor:pointer;">링크 복사</button>
-                </div>
-            </div>
-
-            <div id="share-post" style="display:none">
-                <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
-                    이 여행 플랜을 커뮤니티에 후기로 게시합니다.
-                </p>
-                <button class="btn-next" style="width:100%"
-                        onclick="this.closest('.overlay').classList.remove('open');
-                         document.getElementById('commWriteModal')
-                           &&document.getElementById('commWriteModal').classList.add('open')">
-                    커뮤니티 후기 작성하기
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
 

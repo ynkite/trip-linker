@@ -17,7 +17,7 @@
     --foot-text:      #CDE0DB;   /* 일반 본문 글자 / 링크 */
     --foot-text-bold: #FFFFFF;   /* 강조 글자(슬로건·팀장·팀원) */
     --foot-muted:     #9FBAB4;   /* 보조 설명 글자(소속 등) */
-    --foot-credits:   #7FA39C;   /* 하단 출처·저작권 글자 */
+    --foot-credits:   #88ABA4;   /* 하단 출처·저작권 글자 */
     --foot-line:      rgba(255,255,255,.10);  /* 하단 구분선 */
     --foot-divider:   rgba(255,255,255,.25);  /* 출처 사이 | 기호 */
     /* 로고 반전: 어두운 배경이면 1, 밝은 배경으로 바꾸면 0 으로 */
@@ -73,7 +73,7 @@
 
 /* 정보 컬럼 */
 .foot-col { min-width: 150px; }
-.foot-col h4 {
+.foot-col h2 {
     font-size: 12px;
     font-weight: 700;
     letter-spacing: .06em;

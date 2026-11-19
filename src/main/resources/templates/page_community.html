@@ -162,16 +162,6 @@
     });
   </script>
 
-  <style>
-    .active-tag { background: var(--sage) !important; color: #fff !important; border-color: var(--sage-d) !important }
-    #blogEditor:empty:before { content: attr(data-placeholder); color: var(--text3); pointer-events: none }
-    #blogEditor img { max-width: 100%; border-radius: 8px; margin: 8px 0; display: block }
-    .comm-tab-food  { border-left: 3px solid var(--coral) }
-    .comm-tab-tour  { border-left: 3px solid var(--sky) }
-    .comm-tab-cafe  { border-left: 3px solid #A78BFA }
-    .comm-tab-stay  { border-left: 3px solid var(--sage) }
-    .comm-tab-route { border-left: 3px solid var(--warm) }
-  </style>
   <div class="page" id="page-community">
     <div class="comm-layout">
       <div class="comm-main">
@@ -258,7 +248,7 @@
           <input class="form-input" placeholder="제목을 입력해주세요" id="writeTitle">
         </div>
         <div class="form-group" style="margin-bottom:12px">
-          <label class="form-label">내 여행 기록 연동 <span style="font-size:11px;font-weight:400;color:var(--text3)">(방문 장소 자동 바인딩)</span></label>
+          <label class="form-label" for="writePlanSelect">내 여행 기록 연동 <span style="font-size:11px;font-weight:400;color:var(--text3)">(방문 장소 자동 바인딩)</span></label>
           <select class="form-input" id="writePlanSelect" onchange="window._budgetSelectedTripId = this.value; onWritePlanSelect(this.value)">
           </select>
           <div id="placeReviewsSection">
@@ -315,49 +305,6 @@
           <div style="display:flex;gap:8px">
             <button class="btn-o" style="padding:10px 16px;font-size:13px" onclick="closeWrite()">취소</button>
             <button class="btn-f" style="padding:10px 24px;font-size:13px" onclick="submitReview()">등록하기</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="overlay" id="mapPlaceModal" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="modal" style="width:360px">
-      <div class="modal-hd">
-        <div>
-          <div class="modal-ttl" id="mpPlace"></div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px" id="mpType"></div>
-        </div>
-        <button class="modal-x" onclick="document.getElementById('mapPlaceModal').classList.remove('open')">✕</button>
-      </div>
-      <div class="modal-bd">
-        <div id="mpReviews"></div>
-        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border2)">
-          <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px">지도 앱에서 보기</div>
-          <div style="display:flex;gap:8px" id="mpLinks"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="overlay" id="reviewDetailModal" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="modal" style="width:460px">
-      <div class="modal-hd">
-        <div>
-          <div class="modal-ttl" id="rdPlace"></div>
-          <div id="rdType" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
-        </div>
-        <button class="modal-x" onclick="document.getElementById('reviewDetailModal').classList.remove('open')">✕</button>
-      </div>
-      <div class="modal-bd">
-        <div id="rdMeta" style="font-size:11px;color:var(--text3);margin-bottom:10px"></div>
-        <div id="rdBody" style="font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap;margin-bottom:16px"></div>
-        <div style="border-top:1px dashed var(--border2);padding-top:12px">
-          <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text)">댓글</div>
-          <div id="rdComments"></div>
-          <div style="display:flex;gap:6px;margin-top:10px">
-            <input class="form-input" style="flex:1;padding:6px;font-size:12px" placeholder="댓글을 입력하세요...">
-            <button class="btn-f" style="padding:6px 12px;font-size:12px" onclick="toast('댓글 등록')">등록</button>
           </div>
         </div>
       </div>

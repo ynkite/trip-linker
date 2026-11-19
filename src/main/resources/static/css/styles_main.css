@@ -32,7 +32,7 @@
     --warm-ink: #9A5822; /* 황토색 작은 글씨용 — 흰 바탕 대비 5.5:1 (#C4763A 는 3.5:1 로 Lighthouse 대비 항목 실패) */
     --warm-pale: #FBF0E6;
     --coral: #E87060;
-    --sky: #5B9BD5;
+    --sky: #5897D1;
     --text1: #1C2B2A;
     --text2: #4A5E5C;
     --text3: #586E6B; /* 흰 바탕 대비 5.4:1 (전 #8FA3A0 은 2.6:1 로 Lighthouse 대비 항목 실패) */
@@ -4866,3 +4866,54 @@ nav {
     transform: none;
     z-index: 1;
 }
+
+/* 관리자 회원 정지 모달 (page_admin.html 본문 <style> 에서 그대로 옮김) */
+.sus-wrap {background:var(--surface);border-radius:16px;padding:28px 28px 24px;width:420px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.14);}
+.sus-hd   {display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.sus-ttl  {font-size:17px;font-weight:800;color:var(--text1);display:flex;align-items:center;gap:8px;}
+.sus-info {background:var(--cream2);border-radius:10px;padding:12px 16px;margin-bottom:18px;}
+.sus-row  {display:flex;gap:16px;font-size:13px;margin-top:4px;}
+.sus-lbl  {color:var(--text3);min-width:56px;}
+.sus-val  {color:var(--text1);font-weight:600;}
+.sus-notif{background:#FFFBEB;border:1px solid #FEF3C7;border-radius:10px;padding:14px 16px;margin:14px 0;}
+.sus-n-ttl{font-size:12px;font-weight:700;color:#92400E;margin-bottom:4px;}
+.sus-n-sub{font-size:11px;color:#B45309;margin-bottom:8px;}
+.sus-n-ta {width:100%;border:none;background:transparent;font-size:13px;font-family:inherit;color:var(--text1);resize:none;outline:none;min-height:44px;}
+.sus-guide{background:var(--cream2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text3);line-height:1.65;margin-bottom:16px;}
+.sus-foot {display:flex;gap:10px;}
+.btn-sus-ok{flex:1;background:var(--coral);color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;}
+.btn-sus-ok:hover{filter:brightness(.92);}
+.btn-sus-cl{flex:0 0 80px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2);}
+.btn-sus-cl:hover{background:var(--cream2);}
+
+/* 지도 화면: 확정 일정 잠금 · 숙소 카드 단추 · 사이트 선택 단추 (page_map.html 본문 <style> 에서 그대로 옮김) */
+/* 확정(FIXED) 상태일 때 일정 영역의 편집 조작을 잠금 */
+.map-left.plan-locked .pr-drag,
+.map-left.plan-locked .btn-replace,
+.map-left.plan-locked .replace-area,
+.map-left.plan-locked .queue-box,
+.map-left.plan-locked #queueToggle {
+  display: none !important;
+}
+.map-left.plan-locked .place-row {
+  cursor: default !important;
+}
+.map-left.plan-locked .place-row[draggable] {
+  pointer-events: auto;
+}
+
+/* ★숙소 카드 아래 액션 버튼 줄 */
+.stay-action-row { display:flex; gap:6px; padding:6px 10px 10px 44px; }
+.stay-action-row button {
+  flex:1; border:none; border-radius:6px; padding:7px 0;
+  font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.btn-stay-check, .btn-stay-book { background:#2D9E8A; color:#fff; }
+.btn-stay-edit { background:#F5A623; color:#fff; }
+.map-left.plan-locked .btn-stay-edit,
+.map-left.plan-locked .btn-stay-check { display:none !important; }
+
+/* ★모달 사이트 선택 버튼 */
+.site-btn {
+  flex:1; border:1px solid #2D9E8A; background:#fff; color:#2D9E8A;
+  border-radius:8px; padding:10px 0; font-size:13px; font-weight:700; cursor:pointer; }
+.site-btn:hover { background:#2D9E8A; color:#fff; }

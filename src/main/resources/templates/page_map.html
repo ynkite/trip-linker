@@ -2079,38 +2079,6 @@
   </script>
 
   <div class="page" id="page-map">
-    <style>
-      /* 확정(FIXED) 상태일 때 일정 영역의 편집 조작을 잠금 */
-      .map-left.plan-locked .pr-drag,
-      .map-left.plan-locked .btn-replace,
-      .map-left.plan-locked .replace-area,
-      .map-left.plan-locked .queue-box,
-      .map-left.plan-locked #queueToggle {
-        display: none !important;
-      }
-      .map-left.plan-locked .place-row {
-        cursor: default !important;
-      }
-      .map-left.plan-locked .place-row[draggable] {
-        pointer-events: auto;
-      }
-
-      /* ★숙소 카드 아래 액션 버튼 줄 */
-      .stay-action-row { display:flex; gap:6px; padding:6px 10px 10px 44px; }
-      .stay-action-row button {
-        flex:1; border:none; border-radius:6px; padding:7px 0;
-        font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
-      .btn-stay-check, .btn-stay-book { background:#2D9E8A; color:#fff; }
-      .btn-stay-edit { background:#F5A623; color:#fff; }
-      .map-left.plan-locked .btn-stay-edit,
-      .map-left.plan-locked .btn-stay-check { display:none !important; }
-
-      /* ★모달 사이트 선택 버튼 */
-      .site-btn {
-        flex:1; border:1px solid #2D9E8A; background:#fff; color:#2D9E8A;
-        border-radius:8px; padding:10px 0; font-size:13px; font-weight:700; cursor:pointer; }
-      .site-btn:hover { background:#2D9E8A; color:#fff; }
-    </style>
     <div class="map-wrap">
       <!-- 모바일 전용 탭 바 -->
       <div class="map-mobile-tabs">
@@ -2220,43 +2188,6 @@
 
       <!-- ===================== PAGE 07 BUDGET ===================== -->
 
-      <!-- 지도 장소 후기 팝업 -->
-      <div class="overlay" id="mapPlaceModal" onclick="if(event.target===this)this.classList.remove('open')">
-        <div class="modal" style="width:500px">
-          <div class="modal-hd">
-            <div>
-              <div class="modal-ttl" id="mpPlace">장소명</div>
-              <div style="font-size:12px;color:var(--text3);margin-top:2px" id="mpType"></div>
-            </div>
-            <button class="modal-x" onclick="document.getElementById('mapPlaceModal').classList.remove('open')">✕</button>
-          </div>
-          <div class="modal-bd">
-            <div id="mpNavi"></div>
-            <div id="mpReviews"></div>
-            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border2)">
-              <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px">지도 앱에서 보기</div>
-              <div style="display:flex;gap:8px" id="mpLinks"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 후기 전체보기 팝업 -->
-      <div class="overlay" id="reviewDetailModal" onclick="if(event.target===this)this.classList.remove('open')">
-        <div class="modal" style="width:460px">
-          <div class="modal-hd">
-            <div>
-              <div class="modal-ttl" id="rdPlace"></div>
-              <div id="rdType" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
-            </div>
-            <button class="modal-x" onclick="document.getElementById('reviewDetailModal').classList.remove('open')">✕</button>
-          </div>
-          <div class="modal-bd">
-            <div id="rdStars" style="font-size:15px;margin-bottom:10px"></div>
-            <p id="rdText" style="font-size:14px;color:var(--text2);line-height:1.8"></p>
-          </div>
-        </div>
-      </div>
 
 
       <!-- page_map.html 맨 아래 후기 팝업들 옆에 추가 -->
@@ -2460,6 +2391,44 @@
                 border-radius:8px;font-weight:700;font-size:15px;cursor:pointer;">
           저장
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 장소 후기 · 후기 전체보기 팝업: 다른 화면(커뮤니티)에서도 열리게 page-map 밖에 둔다 -->
+  <div class="overlay" id="mapPlaceModal" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal" style="width:500px">
+      <div class="modal-hd">
+        <div>
+          <div class="modal-ttl" id="mpPlace">장소명</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px" id="mpType"></div>
+        </div>
+        <button class="modal-x" onclick="document.getElementById('mapPlaceModal').classList.remove('open')">✕</button>
+      </div>
+      <div class="modal-bd">
+        <div id="mpNavi"></div>
+        <div id="mpReviews"></div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border2)">
+          <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px">지도 앱에서 보기</div>
+          <div style="display:flex;gap:8px" id="mpLinks"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 후기 전체보기 팝업 -->
+  <div class="overlay" id="reviewDetailModal" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="modal" style="width:460px">
+      <div class="modal-hd">
+        <div>
+          <div class="modal-ttl" id="rdPlace"></div>
+          <div id="rdType" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
+        </div>
+        <button class="modal-x" onclick="document.getElementById('reviewDetailModal').classList.remove('open')">✕</button>
+      </div>
+      <div class="modal-bd">
+        <div id="rdStars" style="font-size:15px;margin-bottom:10px"></div>
+        <p id="rdText" style="font-size:14px;color:var(--text2);line-height:1.8"></p>
       </div>
     </div>
   </div>

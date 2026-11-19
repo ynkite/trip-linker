@@ -1560,3 +1560,10 @@
     border-color: #47B39F;
     color: #fff;
 }
+
+/* 커뮤니티 탭 색 띠 (page_community.html 본문 <style> 에서 옮김. .active-tag · #blogEditor 는 styles_main.css 에 같은 규칙이 있어 뺌) */
+.comm-tab-food  { border-left: 3px solid var(--coral) }
+.comm-tab-tour  { border-left: 3px solid var(--sky) }
+.comm-tab-cafe  { border-left: 3px solid #A78BFA }
+.comm-tab-stay  { border-left: 3px solid var(--sage) }
+.comm-tab-route { border-left: 3px solid var(--warm) }
