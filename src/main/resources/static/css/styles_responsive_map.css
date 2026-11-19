@@ -32,17 +32,20 @@
 /* ≤768px */
 @media (max-width: 768px) {
 
-    /* 전체 래퍼: flex 세로 스택. 위 메뉴(--nav-h)와 아래 바텀 네비 자리(.page 아래 여백)를 빼서 창 높이에 딱 맞춘다 */
+    /* 전체 래퍼: flex 세로 스택. 위 메뉴(--nav-h)와 아래 메뉴의 실제 높이(--bnav-h, 안전영역 포함)를 빼서
+       지도가 아래 메뉴 바로 위까지 찬다. .page 의 68px 아래 여백은 메뉴보다 커서 지도 화면에서는 쓰지 않는다 */
+    #page-map { padding-bottom: 0; }
     .map-wrap {
         display: flex;
         flex-direction: column;
         position: relative;
-        height: calc(100vh - var(--nav-h, 72px) - 68px - env(safe-area-inset-bottom, 0px));
-        height: calc(100dvh - var(--nav-h, 72px) - 68px - env(safe-area-inset-bottom, 0px));
+        height: calc(100vh - var(--nav-h, 72px) - var(--bnav-h, 68px));
+        height: calc(100dvh - var(--nav-h, 72px) - var(--bnav-h, 68px));
     }
 
     /* 마커는 PC 의 2/3 크기, 누르는 자리는 40px 그대로 */
     .tl-pin { --pin-size: 24px; }
+    .tl-pin.small { --pin-size: 12px; }
     .tl-pin-dot { border-width: 2px; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); }
     .tl-pin-dot::before { inset: -8px; }
     .tl-pin-label {

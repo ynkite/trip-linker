@@ -66,21 +66,19 @@
     const MAP_TOTAL_BUDGET_DISPLAY = '₩ 404,000';
 
 
-    // ── nav 실제 높이 → --nav-h 변수 갱신 (탭 잘림 방지) ──
+    // ── 위 메뉴 · 휴대폰 아래 메뉴 실제 높이 → --nav-h · --bnav-h 변수 갱신 (지도 높이 계산용) ──
     // DOMContentLoaded 한 번만으론 부족 — nav 내용이 JS로 나중에 주입되므로
-    // ResizeObserver로 nav 크기 변화를 실시간 감지해서 갱신
+    // ResizeObserver로 크기 변화를 실시간 감지해서 갱신
     function syncNavHeight() {
-      var nav = document.querySelector('nav');
-      if (nav) {
-        document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
-      }
+      var nav = document.querySelector('nav'), bnav = document.getElementById('bottomNav');
+      if (nav) document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+      if (bnav) document.documentElement.style.setProperty('--bnav-h', bnav.offsetHeight + 'px');
     }
     document.addEventListener('DOMContentLoaded', function() {
       syncNavHeight();
-      var nav = document.querySelector('nav');
-      if (nav && window.ResizeObserver) {
-        new ResizeObserver(syncNavHeight).observe(nav);
-      }
+      if (!window.ResizeObserver) return;
+      var ro = new ResizeObserver(syncNavHeight);
+      ['nav', '#bottomNav'].forEach(function(sel) { var e = document.querySelector(sel); if (e) ro.observe(e); });
     });
     window.addEventListener('resize', syncNavHeight);
 
@@ -1149,6 +1147,7 @@
     //   차례는 방문 순서(누른 마커가 맨 앞). 자리는 아래 → 위 → 오른쪽 → 왼쪽 중 처음 비는 곳.
     //   먼저 놓인 이름표 · 다른 마커 · 지도 위 상자(날씨 알림 등)와 겹치거나 지도 밖으로 나가면 다음 자리,
     //   네 곳이 다 안 되면 그 이름표만 숨긴다(마커는 보임). 그래서 축소하면 마커만, 확대하면 이름표가 뜬다.
+    //   원이 서로 겹치는 마커는 같은 때에 작은 점으로 바꾸고(숙소 빼고), 안 겹치게 되면 원래 마커로 돌린다.
     window._mapLabelsOn = true;     // 휴대폰 「이름」 단추
     window._pinnedLabelKey = null;  // 누른 마커: 이름 전체를 먼저 보인다
 
@@ -1171,11 +1170,27 @@
       var labelsOn = window._mapLabelsOn || !(toggle && toggle.offsetWidth); // PC 에는 단추가 없으니 늘 켬
 
       var shown = items.filter(function(it) { return it.el && it.overlay.getMap(); });
-      var markers = shown.map(function(it) {
+      shown.forEach(function(it) {
         var pt = proj.containerPointFromCoords(it.overlay.getPosition());
-        it._x = pt.x; it._y = pt.y; it._r = it.el.firstChild.offsetWidth / 2;
-        return { it: it, x: pt.x - it._r, y: pt.y - it._r, w: it._r * 2, h: it._r * 2 };
+        it._x = pt.x; it._y = pt.y;
+        it._same = it.labelEl.textContent + '@' + Math.round(pt.x) + ',' + Math.round(pt.y);
+        it.el.classList.remove('small');
       });
+      // 지금 배율에서 원이 다른 마커와 겹치면 작은 점으로(같은 장소 두 번은 빼고). 숙소는 하루의 기준점이라 줄이지 않는다
+      var dist = function(a, b) { return Math.hypot(a._x - b._x, a._y - b._y); };
+      var full = shown.length ? shown[0].el.firstChild.offsetWidth : 0;
+      shown.forEach(function(it) {
+        if (it.type !== 'stay' && shown.some(function(o) { return o !== it && o._same !== it._same && dist(o, it) < full; })) it.el.classList.add('small');
+      });
+      var markers = shown.map(function(it) {
+        it._r = it.el.firstChild.offsetWidth / 2;
+        return { it: it, x: it._x - it._r, y: it._y - it._r, w: it._r * 2, h: it._r * 2 };
+      });
+      // 누른 마커가 점이면 그 자리에 겹쳐 있는 점들의 이름도 함께 보인다
+      var tapped = shown.find(function(it) { return it.key === window._pinnedLabelKey; });
+      var isPinned = function(it) {
+        return !!tapped && (it === tapped || (tapped.el.classList.contains('small') && it.el.classList.contains('small') && dist(it, tapped) < it._r + tapped._r));
+      };
       var blocks = [];
       ['.weather-alert', '#demoNotice', '#mapLabelToggle'].forEach(function(sel) {
         var e = document.querySelector('#mapView ' + sel);
@@ -1183,14 +1198,15 @@
         if (r && r.width && r.height) blocks.push({ x: r.left - boxR.left, y: r.top - boxR.top, w: r.width, h: r.height });
       });
 
-      var rank = function(it) { return it.key === window._pinnedLabelKey ? -1 : it.order; };
+      var rank = function(it) { return (isPinned(it) ? -10000 : 0) + it.order; };
       var placed = [], seen = {};
       shown.slice().sort(function(a, b) { return rank(a) - rank(b); }).forEach(function(it) {
-        var lab = it.labelEl, pinned = it.key === window._pinnedLabelKey;
+        var lab = it.labelEl, pinned = isPinned(it);
         it.el.classList.toggle('pinned', pinned);
-        it.overlay.setZIndex(pinned ? 2 : 1);
+        // 쌓는 순서: 숙소가 맨 위, 그다음 누른 마커, 나머지는 방문 순서가 앞인 것이 위
+        it.overlay.setZIndex(it.type === 'stay' ? 3000 : (pinned ? 2000 : 1000) - it.order);
         // 같은 장소가 두 번(첫날 끝 숙소 = 둘째 날 시작 숙소) 나오면 이름표는 한 번만
-        var same = lab.textContent + '@' + Math.round(it._x) + ',' + Math.round(it._y);
+        var same = it._same;
         if ((!labelsOn && !pinned) || seen[same]) { lab.classList.remove('on'); return; }
         seen[same] = true;
 
@@ -1250,7 +1266,8 @@
       var alertEl = document.querySelector('#mapView .weather-alert');
       var ar = alertEl && alertEl.getBoundingClientRect();
       if (box && ar && ar.height) bottom = Math.max(bottom, box.getBoundingClientRect().bottom - ar.top + 12);
-      map.setBounds(b, 40, 48, bottom, 32);
+      // 좌우 여백은 마커 반지름(12) + 4. 오른쪽은 확대 단추 쪽이라 조금 더. 더 크면 390 폭에서 한 단계 더 축소된다
+      map.setBounds(b, 40, 36, bottom, 16);
       layoutMapLabels();
     }
 
