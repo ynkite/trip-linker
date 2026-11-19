@@ -228,18 +228,21 @@ public class DemoSeedService {
             em.persist(form);
             plan.linkInputForm(form);
 
+            // 장소별 금액은 떠나기 전에 낸 예상 금액. 지난 여행은 같은 금액을 실제 지출로도 넣는다
             boolean past = trip.isPast(today);
             for (int d = 0; d < trip.days().size(); d++) {
                 for (DemoSeedData.Stop s : trip.days().get(d).stops()) {
                     if (s.amount() <= 0) continue;
-                    em.persist(Expense.builder()
-                            .plan(plan).user(user)
-                            .category(expenseCategory(s.type()))
-                            .description(s.name())
-                            .amount(s.amount())
-                            .isEstimated(!past)
-                            .expenseDate(start.plusDays(d))
-                            .build());
+                    for (boolean estimated : past ? new boolean[]{true, false} : new boolean[]{true}) {
+                        em.persist(Expense.builder()
+                                .plan(plan).user(user)
+                                .category(expenseCategory(s.type()))
+                                .description(s.name())
+                                .amount(s.amount())
+                                .isEstimated(estimated)
+                                .expenseDate(start.plusDays(d))
+                                .build());
+                    }
                 }
             }
             plans.put(trip.key(), plan);

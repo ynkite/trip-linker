@@ -159,6 +159,23 @@ class DemoSeedServiceJpaTest {
     }
 
     @Test
+    @DisplayName("지난 여행도 가계부 예상 총액이 0 이 아니다(떠나기 전에 낸 예상 금액과 실제 지출이 함께 있다)")
+    void everyTripHasEstimatedAmount() {
+        seedService.reset(demo.getId(), TODAY);
+
+        for (TravelPlan p : plans()) {
+            Long est = em.createQuery("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.plan.id = :id AND e.isEstimated = true", Long.class)
+                    .setParameter("id", p.getId()).getSingleResult();
+            assertThat(est).as(p.getDestination() + " 예상 총액").isPositive();
+            if (p.getEndDate().isBefore(TODAY)) {
+                Long act = em.createQuery("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.plan.id = :id AND e.isEstimated = false", Long.class)
+                        .setParameter("id", p.getId()).getSingleResult();
+                assertThat(act).as(p.getDestination() + " 실제 지출").isPositive();
+            }
+        }
+    }
+
+    @Test
     @DisplayName("대표 일정(부산)의 모든 장소에 평점이 내려오고, 평균은 3 이상이며 값이 두 가지 이상이다")
     void showcaseTripHasRatingsEverywhere() throws Exception {
         seedService.reset(demo.getId(), TODAY);
