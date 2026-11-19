@@ -492,8 +492,9 @@ table {
         width: 100%;
         justify-content: center;
         white-space: nowrap;       /* 글씨 줄바꿈 금지 → 한 줄 */
-        padding: 9px 6px;
+        padding: 9px 4px;
         font-size: 12px;
+        gap: 4px;
     }
     .btn-load-pref {
         flex: 1 1 0;

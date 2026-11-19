@@ -2016,7 +2016,7 @@
             const lbl  = document.getElementById('weather-btn-label');
             if (!s || !e) { wrap.style.display = 'none'; return; }
             const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-            lbl.textContent = `${fmt(new Date(s))} – ${fmt(new Date(e))} 여행 기간 날씨 보기`;
+            lbl.textContent = `${fmt(new Date(s))} – ${fmt(new Date(e))} 날씨 보기`;   // 휴대폰 반 칸에 한 줄로 들어가게 짧게
             wrap.style.display = 'block';
         }
 
