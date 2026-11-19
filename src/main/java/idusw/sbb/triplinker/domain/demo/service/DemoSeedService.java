@@ -223,7 +223,7 @@ public class DemoSeedService {
                     .accommodationType(trip.days().size() > 1 ? "호텔" : null)
                     .companionType(trip.companion())
                     .companionCount(trip.companionCount())
-                    .travelStyles(trip.styles())
+                    .travelStyles(jsonArray(trip.styles()))   // 플래너가 저장하는 꼴(JSON 배열 글)
                     .scheduleDensity("여유롭게")
                     .budget(trip.budget())
                     .build();
@@ -576,6 +576,14 @@ public class DemoSeedService {
             case "cafe" -> "카페";
             default -> "관광지";
         };
+    }
+
+    /** "가,나" → ["가","나"] (값에 따옴표 · 역슬래시가 없는 고정 예시 글만 들어온다) */
+    static String jsonArray(String commaList) {
+        return java.util.Arrays.stream(commaList.split(","))
+                .map(String::trim).filter(x -> !x.isEmpty())
+                .map(x -> "\"" + x + "\"")
+                .collect(java.util.stream.Collectors.joining(",", "[", "]"));
     }
 
     private static String expenseCategory(String type) {

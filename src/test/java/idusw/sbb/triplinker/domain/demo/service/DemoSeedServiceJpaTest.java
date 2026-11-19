@@ -185,6 +185,8 @@ class DemoSeedServiceJpaTest {
             if (!p.getStartDate().isAfter(TODAY)) continue;
             assertThat(p.getDestination()).as(p.getTitle() + " 여행지").matches("[^ ]+ [^ ]+");
             assertThat(p.getForm().getDeparture()).as(p.getTitle() + " 출발지").matches("[^ ]+ [^ ]+");
+            // 플래너는 취향을 JSON 배열 글로 저장 · 복원한다(쉼표 글이면 2단계 칩이 하나도 안 켜져 3단계로 못 감)
+            assertThat(p.getForm().getTravelStyles()).as(p.getTitle() + " 여행 스타일").startsWith("[\"").endsWith("\"]");
         }
     }
 
