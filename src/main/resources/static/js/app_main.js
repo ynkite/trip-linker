@@ -275,10 +275,20 @@ async function loadDemoMode() {
 async function updateDemoNotice(pageId) {
     const bar = document.getElementById('demoNotice');
     if (!bar) return;
+    // 플래너에서 경로를 만들고 처음 지도로 넘어올 때만 5초 보여 준다(저장된 일정을 열 때는 안 띄움)
+    const route = sessionStorage.getItem('ai_generated_route') || '';
+    const key = route.length + ':' + route.slice(0, 80);
+    const fresh = window._demoNoticeOnce && sessionStorage.getItem('demoNoticeSeen') !== key;
+    window._demoNoticeOnce = false;
     const mode = await loadDemoMode();
-    const show = !!(mode && mode.enabled) && pageId === 'map';
+    const show = !!(mode && mode.enabled) && pageId === 'map' && fresh;
     if (show && mode.notice) bar.textContent = mode.notice;
     bar.style.display = show ? 'block' : 'none';
+    clearTimeout(window._demoNoticeTimer);
+    if (show) {
+        sessionStorage.setItem('demoNoticeSeen', key);
+        window._demoNoticeTimer = setTimeout(function () { bar.style.display = 'none'; }, 5000);
+    }
 }
 
 /** 교체 계열 버튼에서 호출. 고정 경로 모드면 안내만 하고 true를 돌려준다. */
@@ -2862,6 +2872,7 @@ function goPlanStep(n) {
             toast('⚠️ 기본 정보 또는 취향 설정이 변경되었습니다. 일정을 다시 생성해주세요.');
             return;
         }
+        window._demoNoticeOnce = true;
         go('map');
         return;
     }
