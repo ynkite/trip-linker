@@ -42,4 +42,5 @@ src/main/resources/application-local.properties
 src/main/resources/application-prod.properties
 boot_*.txt
 trip-linker-images/
-/docs/
+/docs/*
+!/docs/images/
