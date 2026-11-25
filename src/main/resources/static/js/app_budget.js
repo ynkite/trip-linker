@@ -24,7 +24,7 @@ async function updateLedgerList() {
     listEl.innerHTML = pageTrips.map(l => {
         const isSel = (_budgetSelectedTripId === l.id);
         return `
-        <div onclick="selLedger(${l.id});goLedger2()"
+        <div data-onclick="selLedger(${l.id});goLedger2()"
              style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--r);
                     border:2px solid ${isSel ? 'var(--sage)' : 'var(--border)'};
                     background:${isSel ? 'var(--sage-pale)' : 'var(--surface)'};
@@ -66,15 +66,15 @@ function _drawMyLedgerPager(totalPages) {
     const pages = _getBudgetPagerWindow(current, totalPages, 5);
 
     const prev = totalPages > 1
-        ? `<button class="pager-btn" onclick="_setMyLedgerPage(${Math.max(1, current - 1)})" ${current === 1 ? 'disabled' : ''}>&lt;</button>`
+        ? `<button class="pager-btn" data-onclick="_setMyLedgerPage(${Math.max(1, current - 1)})" ${current === 1 ? 'disabled' : ''}>&lt;</button>`
         : '';
 
     const next = totalPages > 1
-        ? `<button class="pager-btn" onclick="_setMyLedgerPage(${Math.min(Number(totalPages), current + 1)})" ${current === Number(totalPages) ? 'disabled' : ''}>&gt;</button>`
+        ? `<button class="pager-btn" data-onclick="_setMyLedgerPage(${Math.min(Number(totalPages), current + 1)})" ${current === Number(totalPages) ? 'disabled' : ''}>&gt;</button>`
         : '';
 
     const nums = pages
-        .map(n => `<button class="pager-btn${n === current ? ' on' : ''}" onclick="_setMyLedgerPage(${n})">${n}</button>`)
+        .map(n => `<button class="pager-btn${n === current ? ' on' : ''}" data-onclick="_setMyLedgerPage(${n})">${n}</button>`)
         .join('');
 
     el.innerHTML = `<div class="ledger-pager" style="margin-top:4px;margin-bottom:12px">${prev}${nums}${next}</div>`;
@@ -118,7 +118,7 @@ function _populateLedgerTripCards() {
     container.innerHTML = pageTrips.map(t => {
         const isSel = (_budgetSelectedTripId === t.id);
         return `
-      <div class="ts-card${isSel ? ' on' : ''}" onclick="_selLedgerCard(this, ${t.id})">
+      <div class="ts-card${isSel ? ' on' : ''}" data-onclick="_selLedgerCard(this, ${t.id})">
         <div class="ts-thumb">🗺️</div>
         <div class="ts-info">
           <div class="ts-name">${t.title || '여행 플랜'}</div>
@@ -144,15 +144,15 @@ function _drawLedgerCardPager(totalPages) {
     const pages = _getBudgetPagerWindow(current, totalPages, 5);
 
     const prev = totalPages > 1
-        ? `<button class="pager-btn" onclick="_setLedgerCardPage(${Math.max(1, current - 1)})" ${current === 1 ? 'disabled' : ''}>&lt;</button>`
+        ? `<button class="pager-btn" data-onclick="_setLedgerCardPage(${Math.max(1, current - 1)})" ${current === 1 ? 'disabled' : ''}>&lt;</button>`
         : '';
 
     const next = totalPages > 1
-        ? `<button class="pager-btn" onclick="_setLedgerCardPage(${Math.min(Number(totalPages), current + 1)})" ${current === Number(totalPages) ? 'disabled' : ''}>&gt;</button>`
+        ? `<button class="pager-btn" data-onclick="_setLedgerCardPage(${Math.min(Number(totalPages), current + 1)})" ${current === Number(totalPages) ? 'disabled' : ''}>&gt;</button>`
         : '';
 
     const nums = pages
-        .map(n => `<button class="pager-btn${n === current ? ' on' : ''}" onclick="_setLedgerCardPage(${n})">${n}</button>`)
+        .map(n => `<button class="pager-btn${n === current ? ' on' : ''}" data-onclick="_setLedgerCardPage(${n})">${n}</button>`)
         .join('');
 
     el.innerHTML = `<div class="ledger-pager" style="margin-top:10px;margin-bottom:4px">${prev}${nums}${next}</div>`;
@@ -182,7 +182,7 @@ function returnToLedgerSelector() {
         // 마이페이지 진입 후 가계부 탭 활성화 + 목록 갱신
         setTimeout(function () {
             if (typeof showMySection === 'function') {
-                var btn = document.querySelector('.my-menu[onclick*="ledger"]');
+                var btn = document.querySelector('.my-menu[data-onclick*="ledger"]');
                 showMySection('ledger', btn || null);
             }
             if (typeof updateLedgerList === 'function') updateLedgerList();
@@ -695,8 +695,8 @@ function _drawExpensePage() {
               <td style="padding:7px 4px;color:var(--text2)">${e.description || '-'}</td>
               <td style="padding:7px 4px;text-align:right;font-weight:700">${_fmtWon(e.amount)}</td>
               <td style="padding:7px 4px;white-space:nowrap">
-                <button onclick="startEditExpense(${e.id},'${e.category}',${e.amount},'${e.date || ''}','${safeDesc}')" style="font-size:11px;padding:3px 10px;background:var(--sage-pale);border:1.5px solid var(--sage-l);border-radius:5px;cursor:pointer;color:var(--sage-d);font-weight:600">수정</button>
-                <button onclick="deleteExpense(${e.id})" style="font-size:11px;padding:3px 10px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:5px;cursor:pointer;color:#DC2626;font-weight:600;margin-left:4px">삭제</button>
+                <button data-onclick="startEditExpense(${e.id},'${e.category}',${e.amount},'${e.date || ''}','${safeDesc}')" style="font-size:11px;padding:3px 10px;background:var(--sage-pale);border:1.5px solid var(--sage-l);border-radius:5px;cursor:pointer;color:var(--sage-d);font-weight:600">수정</button>
+                <button data-onclick="deleteExpense(${e.id})" style="font-size:11px;padding:3px 10px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:5px;cursor:pointer;color:#DC2626;font-weight:600;margin-left:4px">삭제</button>
               </td>
             </tr>`;
         }).join('')}
@@ -711,10 +711,10 @@ function _drawPagination(total) {
     if (!el) return;
     const pages = Math.ceil(total / _EXP_PAGE_SIZE);
     if (pages <= 1) { el.innerHTML = ''; return; }
-    const prev = `<button class="pager-btn" onclick="setExpensePage(${_expensePage - 1})" ${_expensePage === 1 ? 'disabled style="opacity:.4;cursor:default"' : ''}>‹</button>`;
-    const next = `<button class="pager-btn" onclick="setExpensePage(${_expensePage + 1})" ${_expensePage === pages ? 'disabled style="opacity:.4;cursor:default"' : ''}>›</button>`;
+    const prev = `<button class="pager-btn" data-onclick="setExpensePage(${_expensePage - 1})" ${_expensePage === 1 ? 'disabled style="opacity:.4;cursor:default"' : ''}>‹</button>`;
+    const next = `<button class="pager-btn" data-onclick="setExpensePage(${_expensePage + 1})" ${_expensePage === pages ? 'disabled style="opacity:.4;cursor:default"' : ''}>›</button>`;
     const nums = Array.from({ length: pages }, (_, i) => i + 1)
-        .map(n => `<button class="pager-btn${n === _expensePage ? ' on' : ''}" onclick="setExpensePage(${n})">${n}</button>`)
+        .map(n => `<button class="pager-btn${n === _expensePage ? ' on' : ''}" data-onclick="setExpensePage(${n})">${n}</button>`)
         .join('');
     el.innerHTML = `<div class="ledger-pager">${prev}${nums}${next}</div>`;
 }
@@ -762,8 +762,8 @@ function startEditExpense(id, category, amount, date, desc) {
     <td><input type="text" id="edit-desc-${id}" value="${desc}" placeholder="메모" style="width:100%;font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"></td>
     <td><input type="number" id="edit-amt-${id}" value="${amount}" min="0" style="width:80px;font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)"></td>
     <td style="white-space:nowrap">
-      <button onclick="saveEditExpense(${id})" style="font-size:10px;padding:2px 7px;background:var(--sage);color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:2px">저장</button>
-      <button onclick="_loadExpenses(_budgetSelectedTripId)" style="font-size:10px;padding:2px 7px;background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2)">취소</button>
+      <button data-onclick="saveEditExpense(${id})" style="font-size:10px;padding:2px 7px;background:var(--sage);color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:2px">저장</button>
+      <button data-onclick="_loadExpenses(_budgetSelectedTripId)" style="font-size:10px;padding:2px 7px;background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2)">취소</button>
     </td>
   `;
 }
