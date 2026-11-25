@@ -472,7 +472,7 @@
         listEl.innerHTML = reviews.map(r => `
     <div style="background:var(--surface);border:1px solid var(--border2);
                 border-radius:var(--r);padding:16px;${r.postId ? 'cursor:pointer' : ''}"
-         ${r.postId ? `onclick="openPostDetail(${r.postId})"` : ''}>
+         ${r.postId ? `data-onclick="openPostDetail(${r.postId})"` : ''}>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <div class="comm-av">${(r.writerName||'?')[0]}</div>
         <div>

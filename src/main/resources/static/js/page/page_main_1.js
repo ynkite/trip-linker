@@ -70,7 +70,7 @@
               '<span class="pop-scrap-n">★ ' + (item.scrapCount || 0) + '</span>' +
               '</span>' +
               '<button id="' + scrapBtnId + '" class="' + scrapBtnCls + '"' + scrapBtnStyle + ' ' +
-              'onclick="event.stopPropagation(); ' + onClickScrap + '">★ 스크랩</button>' +
+              'data-onclick="event.stopPropagation(); ' + onClickScrap + '">★ 스크랩</button>' +
               '</div>' +
               '</div>';
     }

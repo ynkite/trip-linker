@@ -4986,7 +4986,7 @@ window._handleWriteImageSelect = function(input) {
 
         return '<div class="place-card" style="cursor:pointer" ' +
             'data-my-place-scrap-category="' + escapeHtml(category) + '" ' +
-            'onclick="window.goToScrapPlace(' + placeId + ',\'' + safeNameForJs + '\',\'' + safeCategoryForJs + '\',' + avgRatingForJs + ')">' +
+            'data-onclick="window.goToScrapPlace(' + placeId + ',\'' + safeNameForJs + '\',\'' + safeCategoryForJs + '\',' + avgRatingForJs + ')">' +
             '<div class="pc-hd">' +
             '<div class="pc-icon">' + (iconMap[s.category] || '📍') + '</div>' +
             '<div style="flex:1;min-width:0">' +

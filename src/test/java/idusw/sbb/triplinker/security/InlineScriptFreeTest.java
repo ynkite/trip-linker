@@ -27,8 +27,11 @@ class InlineScriptFreeTest {
     static final List<String> SRI_EXEMPT = List.of("https://dapi.kakao.com/v2/maps/sdk.js");
 
     static final Pattern SCRIPT = Pattern.compile("<script\\b([^>]*)>", Pattern.CASE_INSENSITIVE);
-    // 마크업 속성이든 JS 문자열 안의 HTML 이든: 공백 뒤 on이름= 다음 따옴표
-    static final Pattern HANDLER_ATTR = Pattern.compile("(?<=\\s)on[a-z]+=(?=\\\\?[\"'])");
+    // 마크업 속성이든 JS 글(따옴표 · 백틱 글, + 로 이은 글) 안의 HTML 이든: on이름= 다음 따옴표 · 백틱 · ${
+    // 앞 글자가 낱말 · - · . 이면 제외한다(data-onclick=, el.onclick = 은 인라인 속성이 아님).
+    // 글 첫머리('onclick="…', `onclick="…`)나 th:onclick= 처럼 공백이 아닌 글자 뒤에 와도 잡는다.
+    static final Pattern HANDLER_ATTR =
+            Pattern.compile("(?<![\\w\\-.])on[a-z]+\\s*=\\s*(?=\\\\?[\"'`]|\\$\\{)");
 
     private static List<Path> files(String dir, String ext) throws IOException {
         try (Stream<Path> s = Files.walk(RES.resolve(dir))) {
@@ -40,6 +43,14 @@ class InlineScriptFreeTest {
     private static String read(Path p) throws IOException {
         String s = Files.readString(p, StandardCharsets.UTF_8);
         return p.toString().endsWith(".html") ? s.replaceAll("(?s)<!--.*?-->", "") : s;
+    }
+
+    // JS 의 설명 주석 줄(// … , /* … , * …)은 실행되지 않는다. 주석 통째 지우기는
+    // "image/*" 같은 글 뒤의 코드를 가릴 수 있어 줄 머리로만 가린다.
+    private static boolean isJsCommentLine(Path p, String line) {
+        if (!p.toString().endsWith(".js")) return false;
+        String t = line.strip();
+        return t.startsWith("//") || t.startsWith("/*") || t.startsWith("*");
     }
 
     @Test
@@ -62,11 +73,11 @@ class InlineScriptFreeTest {
         all.addAll(files("static/js", ".js"));
         List<String> found = new ArrayList<>();
         for (Path p : all) {
-            String s = read(p);
-            Matcher m = HANDLER_ATTR.matcher(s);
-            while (m.find()) {
-                int line = (int) s.substring(0, m.start()).chars().filter(c -> c == '\n').count() + 1;
-                found.add(p.getFileName() + ":" + line + " " + m.group());
+            String[] lines = read(p).split("\n", -1);
+            for (int i = 0; i < lines.length; i++) {
+                if (isJsCommentLine(p, lines[i])) continue;
+                Matcher m = HANDLER_ATTR.matcher(lines[i]);
+                while (m.find()) found.add(p.getFileName() + ":" + (i + 1) + " " + m.group());
             }
         }
         assertThat(found).isEmpty();
