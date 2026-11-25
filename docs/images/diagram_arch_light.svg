@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 357" width="860" height="357">
+<style>text{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR','Noto Sans CJK KR',system-ui,sans-serif}</style>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,4 L0,8 L2,4 z" fill="#6e7781"/></marker></defs>
+<rect x="250" y="20" width="250" height="291" rx="10" fill="none" stroke="#afb8c1" stroke-dasharray="6,4"/>
+<text x="262" y="39" font-size="12" fill="#59636e">Spring Boot 서버 (Docker, AWS EC2)</text>
+<path d="M215,83.5 L259,83.5" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#a)"/>
+<path d="M505,53.5 L529,53.5" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#a)"/>
+<path d="M505,147.5 L529,147.5" fill="none" stroke="#6e7781" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#a)"/>
+<path d="M505,259.5 L529,259.5" fill="none" stroke="#6e7781" stroke-width="1.4" marker-end="url(#a)"/>
+<rect x="270" y="50" width="210" height="67" rx="8" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="375.0" y="79.0" font-size="15" font-weight="700" text-anchor="middle" fill="#1f2328">Spring Security</text>
+<text x="375.0" y="101.0" font-size="13" text-anchor="middle" fill="#59636e">JWT, 권한 검사, 보안 헤더</text>
+<rect x="270" y="133" width="210" height="67" rx="8" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="375.0" y="162.0" font-size="15" font-weight="700" text-anchor="middle" fill="#1f2328">경로 서비스</text>
+<text x="375.0" y="184.0" font-size="13" text-anchor="middle" fill="#59636e">후보 수집, 서버 검사</text>
+<rect x="270" y="216" width="210" height="67" rx="8" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="375.0" y="245.0" font-size="15" font-weight="700" text-anchor="middle" fill="#1f2328">챗봇, 날씨 서비스</text>
+<text x="375.0" y="267.0" font-size="13" text-anchor="middle" fill="#59636e">조건 수정, 기상청 예보</text>
+<rect x="540" y="20" width="300" height="67" rx="8" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="690.0" y="49.0" font-size="15" font-weight="700" text-anchor="middle" fill="#1f2328">MariaDB</text>
+<text x="690.0" y="71.0" font-size="13" text-anchor="middle" fill="#59636e">회원, 여행, 일정 JSON, 챗봇 기록</text>
+<rect x="540" y="105" width="300" height="85" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+<text x="690.0" y="134.0" font-size="15" font-weight="700" text-anchor="middle" fill="#0550ae">AI (Spring AI)</text>
+<text x="690.0" y="156.0" font-size="13" text-anchor="middle" fill="#59636e">Claude 가 먼저, 실패하면 Groq</text>
+<text x="690.0" y="174.0" font-size="13" text-anchor="middle" fill="#59636e">챗봇은 그다음 Gemini</text>
+<rect x="540" y="208" width="300" height="103" rx="8" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="690.0" y="237.0" font-size="15" font-weight="700" text-anchor="middle" fill="#1f2328">외부 API</text>
+<text x="690.0" y="259.0" font-size="13" text-anchor="middle" fill="#59636e">카카오 로컬 검색과 길찾기</text>
+<text x="690.0" y="277.0" font-size="13" text-anchor="middle" fill="#59636e">기상청 단기예보</text>
+<text x="690.0" y="295.0" font-size="13" text-anchor="middle" fill="#59636e">Google, Kakao 로그인</text>
+<rect x="20" y="41.0" width="190" height="85" rx="8" fill="#f6f8fa" stroke="#d1d9e0" stroke-width="1"/>
+<text x="115.0" y="70.0" font-size="15" font-weight="700" text-anchor="middle" fill="#1f2328">브라우저</text>
+<text x="115.0" y="92.0" font-size="13" text-anchor="middle" fill="#59636e">Thymeleaf, JavaScript</text>
+<text x="115.0" y="110.0" font-size="13" text-anchor="middle" fill="#59636e">카카오 지도 SDK</text>
+<rect x="690" y="329" width="22" height="14" rx="3" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+<text x="720" y="340.5" font-size="12" fill="#59636e">AI 가 일하는 칸</text>
+<path d="M581.0,336 L613.0,336" stroke="#6e7781" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#a)"/>
+<text x="627.0" y="340.5" font-size="12" fill="#59636e">AI 호출</text>
+</svg>
