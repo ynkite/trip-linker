@@ -50,7 +50,7 @@ public class SecurityConfig {
     // - form-action 에 카카오: 카카오톡 공유 SDK 가 sharer.kakao.com 으로 폼을 보내고 로그인(accounts.kakao.com)으로 넘긴다
     static final String CSP = String.join("; ",
             "default-src 'self'",
-            "script-src 'self' https://dapi.kakao.com https://t1.daumcdn.net https://t1.kakaocdn.net https://cdnjs.cloudflare.com",
+            "script-src 'self' 'unsafe-inline' https://dapi.kakao.com https://t1.daumcdn.net https://t1.kakaocdn.net https://cdnjs.cloudflare.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' data: https://fonts.gstatic.com",
             "img-src 'self' data: blob: https:",
