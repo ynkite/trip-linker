@@ -201,7 +201,7 @@ function _renderPostList(posts, reset) {
     div.setAttribute('data-date',   date);
 
     div.innerHTML =
-        '<div class="post-card" data-onclick="openPostDetail(' + pid + ')">' +
+        '<div class="post-card" onclick="openPostDetail(' + pid + ')">' +
         '<span class="post-cat cat-' + _commState.currentTab + '">' + label + '</span>' +
         '<div class="post-ttl" style="margin-top:5px">' + _esc(post.title) + '</div>' +
         '<div class="post-foot">' +
@@ -211,9 +211,9 @@ function _renderPostList(posts, reset) {
         '<span class="post-stat" id="scrap-cnt-' + pid + '">🔖 ' + (post.scrapCount || 0) + '</span>' +
         '</div>' +
         '<div style="display:flex;gap:6px">' +
-        '<button data-onclick="likePost(event,' + pid + ')"  class="btn-comm-sm">❤️ 좋아요</button>' +
-        '<button data-onclick="scrapPost(event,' + pid + ')" class="btn-comm-sm">🔖 스크랩</button>' +
-        '<button data-onclick="openReportPostModal(event,' + pid + ')" class="btn-comm-sm">🚨 신고</button>' +
+        '<button onclick="likePost(event,' + pid + ')"  class="btn-comm-sm">❤️ 좋아요</button>' +
+        '<button onclick="scrapPost(event,' + pid + ')" class="btn-comm-sm">🔖 스크랩</button>' +
+        '<button onclick="openReportPostModal(event,' + pid + ')" class="btn-comm-sm">🚨 신고</button>' +
         '</div>' +
         '</div>' +
         '</div>';
@@ -501,7 +501,7 @@ async function loadComments(postId) {
       '<span style="font-size:10px;color:var(--text3)">' +
       (c.createdAt ? c.createdAt.substring(0, 10) : '') +
       '</span>' +
-      '<button data-onclick="openReportCommentModal(' + c.commentId + ', ' + postId + ')" ' +
+      '<button onclick="openReportCommentModal(' + c.commentId + ', ' + postId + ')" ' +
       'style="margin-left:auto;font-size:10px;background:none;border:1px solid var(--border2);' +
       'border-radius:4px;padding:1px 7px;cursor:pointer;color:var(--text3)" ' +
       'title="댓글 신고">🚨 신고</button>' +
@@ -609,7 +609,7 @@ async function loadMyScrap(tabKey) {
 
   el.innerHTML = scraps.length
       ? scraps.map(s =>
-          '<div class="post-card" style="cursor:pointer" data-onclick="goToPlaceReviews(' + s.placeId + ')">' +
+          '<div class="post-card" style="cursor:pointer" onclick="goToPlaceReviews(' + s.placeId + ')">' +
           '<span class="post-cat">' + _scrapCatIcon(tabKey) + ' ' + _catLabel(tabKey) + '</span>' +
           '<div class="post-ttl" style="margin-top:5px">' + _esc(s.placeName || '알 수 없는 장소') + '</div>' +
           '<div class="post-foot">' +
@@ -617,7 +617,7 @@ async function loadMyScrap(tabKey) {
           '<span class="post-stat">' + _esc(s.address || '') + '</span>' +
           (s.avgRating ? '<span class="post-stat">⭐ ' + s.avgRating + '</span>' : '') +
           '</div>' +
-          '<button data-onclick="deleteScrap(event,' + s.scrapId + ',\'' + tabKey + '\')" ' +
+          '<button onclick="deleteScrap(event,' + s.scrapId + ',\'' + tabKey + '\')" ' +
           'style="font-size:11px;background:none;border:1px solid var(--border2);' +
           'border-radius:5px;padding:2px 7px;cursor:pointer;color:var(--coral)">' +
           '🗑️ 삭제' +
@@ -641,7 +641,7 @@ async function loadMyRouteScrap() {
 
   el.innerHTML = posts.length
       ? posts.map(p =>
-          '<div class="post-card" data-onclick="openPostDetail(' + p.postId + ')">' +
+          '<div class="post-card" onclick="openPostDetail(' + p.postId + ')">' +
           '<span class="post-cat">' + _catLabel('route') + '</span>' +
           '<div class="post-ttl" style="margin-top:5px">' + _esc(p.title || '') + '</div>' +
           '<div class="post-foot">' +
@@ -649,7 +649,7 @@ async function loadMyRouteScrap() {
           '<span class="post-stat">❤️ ' + (p.likes || 0) + '</span>' +
           '<span class="post-stat">👁 '  + (p.views || 0) + '</span>' +
           '</div>' +
-          '<button data-onclick="cancelRouteScrap(event,' + p.postId + ')" ' +
+          '<button onclick="cancelRouteScrap(event,' + p.postId + ')" ' +
           'style="font-size:11px;background:none;border:1px solid var(--border2);' +
           'border-radius:5px;padding:2px 7px;cursor:pointer;color:var(--coral)">' +
           '🗑️ 스크랩 취소' +
@@ -699,7 +699,7 @@ async function loadMyReviews() {
   re.innerHTML = '<h3 class="my-sec-ttl">작성한 후기</h3>' + (
       posts.length
           ? posts.map(x =>
-              '<div class="post-card" data-onclick="openPostDetail(' + x.postId + ')">' +
+              '<div class="post-card" onclick="openPostDetail(' + x.postId + ')">' +
               '<span class="post-cat">' + _catLabel((x.styleTags || [])[0] || 'route') + '</span>' +
               '<div class="post-ttl" style="margin-top:5px">' + _esc(x.title || '') + '</div>' +
               '<div class="post-foot"><div class="post-stats">' +
@@ -858,9 +858,9 @@ function renderDestBars(dests) {
 //       '<td>' + (u.createdAt ? u.createdAt.substring(0, 10) : '') + '</td>' +
 //       '<td>' +
 //         (isSuspended
-//           ? '<button data-onclick="unsuspendUser(' + u.userId + ')" class="btn-admin-sm btn-ok">해제</button>'
+//           ? '<button onclick="unsuspendUser(' + u.userId + ')" class="btn-admin-sm btn-ok">해제</button>'
 //           : isActive
-//             ? '<button data-onclick="openSuspendModal(\'' + _esc(u.username) + '\',' + u.userId + ')" class="btn-admin-sm btn-warn">정지</button>'
+//             ? '<button onclick="openSuspendModal(\'' + _esc(u.username) + '\',' + u.userId + ')" class="btn-admin-sm btn-warn">정지</button>'
 //             : '') +
 //       '</td>' +
 //     '</tr>';
@@ -936,8 +936,8 @@ function renderDestBars(dests) {
 
       // ↓ PENDING일 때만 버튼, 이미 처리된 건 텍스트 표시
       const actionCell = r.status === 'PENDING'
-          ? '<button data-onclick="openReportAction(\'delete\',' + r.reportId + ',\'' + esc2(r.postTitle) + '\',\'' + esc2(r.reporterName) + '\',\'' + esc2(r.reason) + '\')" class="btn-admin-sm btn-danger">삭제</button>'
-          + '<button data-onclick="openReportAction(\'reject\',' + r.reportId + ',\'' + esc2(r.postTitle) + '\',\'' + esc2(r.reporterName) + '\',\'' + esc2(r.reason) + '\')" class="btn-admin-sm">반려</button>'
+          ? '<button onclick="openReportAction(\'delete\',' + r.reportId + ',\'' + esc2(r.postTitle) + '\',\'' + esc2(r.reporterName) + '\',\'' + esc2(r.reason) + '\')" class="btn-admin-sm btn-danger">삭제</button>'
+          + '<button onclick="openReportAction(\'reject\',' + r.reportId + ',\'' + esc2(r.postTitle) + '\',\'' + esc2(r.reporterName) + '\',\'' + esc2(r.reason) + '\')" class="btn-admin-sm">반려</button>'
           : '<span style="font-size:11px;color:var(--text3)">' + (r.status === 'RESOLVED' ? '처리완료' : '반려됨') + '</span>';
 
       return '<tr>' +
@@ -1061,8 +1061,8 @@ function renderDestBars(dests) {
         '<td>' + (c.startAt ? c.startAt.substring(0, 10) : '-') + ' ~ ' + (c.endAt ? c.endAt.substring(0, 10) : '-') + '</td>' +
         '<td><span class="badge ' + (c.isDefault ? 'badge-ok' : 'badge-info') + '">' + (c.isDefault ? '기본' : '시즌') + '</span></td>' +
         '<td>' +
-        '<button data-onclick="openEditCuration(' + c.curationId + ')" class="btn-admin-sm">수정</button>' +
-        '<button data-onclick="deleteCuration(' + c.curationId + ')"   class="btn-admin-sm btn-danger">삭제</button>' +
+        '<button onclick="openEditCuration(' + c.curationId + ')" class="btn-admin-sm">수정</button>' +
+        '<button onclick="deleteCuration(' + c.curationId + ')"   class="btn-admin-sm btn-danger">삭제</button>' +
         '</td>' +
         '</tr>'
     ).join('');
@@ -1187,8 +1187,8 @@ function renderDestBars(dests) {
         '<div class="pdb-hd" style="border-bottom:1px solid var(--border2);padding-bottom:8px;margin-bottom:8px">' +
         '<span style="font-weight:800;color:var(--sage-d)">Day ' + _curDayN + '</span>' +
         '<div style="display:flex;gap:6px">' +
-        '<button style="font-size:11px;background:var(--sage-pale);border:1px solid var(--sage-l);border-radius:5px;padding:3px 9px;cursor:pointer;color:var(--sage-d)" data-onclick="addPlanItem(this)">+ 장소 추가</button>' +
-        '<button style="font-size:11px;background:#FEF3F2;border:1px solid #FECACA;border-radius:5px;padding:3px 7px;cursor:pointer;color:var(--coral)" data-onclick="removeDay(this)">✕</button>' +
+        '<button style="font-size:11px;background:var(--sage-pale);border:1px solid var(--sage-l);border-radius:5px;padding:3px 9px;cursor:pointer;color:var(--sage-d)" onclick="addPlanItem(this)">+ 장소 추가</button>' +
+        '<button style="font-size:11px;background:#FEF3F2;border:1px solid #FECACA;border-radius:5px;padding:3px 7px;cursor:pointer;color:var(--coral)" onclick="removeDay(this)">✕</button>' +
         '</div>' +
         '</div>' +
         '<div style="font-size:11px;color:var(--text3);padding:6px;text-align:center">장소를 추가해주세요</div>';
@@ -1209,7 +1209,7 @@ function renderDestBars(dests) {
         '<div style="display:flex;align-items:center;gap:8px;width:100%">' +
         '<span class="pdb-type-icon">📍</span>' +
         '<input style="flex:1;border:1px solid var(--border2);background:var(--surface);padding:5px 9px;border-radius:6px;font-size:12px;font-family:inherit;outline:none" placeholder="장소명">' +
-        '<button class="btn-pdb-rm" data-onclick="this.closest(\'.pdb-item\').remove()" style="flex-shrink:0">✕</button>' +
+        '<button class="btn-pdb-rm" onclick="this.closest(\'.pdb-item\').remove()" style="flex-shrink:0">✕</button>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%">' +
         '<select style="padding:5px 7px;border-radius:6px;border:1px solid var(--border2);font-size:11px;font-family:inherit">' +

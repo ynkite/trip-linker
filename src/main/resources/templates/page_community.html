@@ -8,22 +8,174 @@
    * DTO:    PostWriteDto, PostDetailResponseDto, NotificationResponseDto
    * 기능:   커뮤니티 게시판, 후기 작성, 알림팝업
    =================================================== -->
-  <script th:src="@{/js/page/page_community_1.js}"></script>
+  <script>
+
+    /* ─── 커뮤니티 UI 동적 데이터 주입 헬퍼 함수 ─── */
+    function initCommunityPageData() {
+      const tagContainer = document.getElementById("popular-tags-list");
+
+
+      // 2. AI 취향 추천 렌더링
+      const aiTitle = document.getElementById("ai-reco-title");
+      const aiContainer = document.getElementById("ai-reco-list");
+      if (typeof MOCK_AI_RECOMMENDATIONS !== 'undefined') {
+        if (aiTitle) aiTitle.textContent = MOCK_AI_RECOMMENDATIONS.title;
+        if (aiContainer && MOCK_AI_RECOMMENDATIONS.items) {
+          aiContainer.innerHTML = MOCK_AI_RECOMMENDATIONS.items.map(item => `
+        <div class="ai-reco-card" onclick="go(${item.url})">
+          <div style="font-size:11px;color:var(--sage-d);font-weight:700;margin-bottom:2px">${item.category}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">${item.title}</div>
+          <div style="font-size:11px;color:var(--text3)">취향 일치 ${item.matchCount}개</div>
+        </div>
+      `).join('');
+        }
+      }
+
+      // 3. 카테고리 탭 게시글 목록 주입
+      const posts = typeof MOCK_COMMUNITY_POSTS !== 'undefined' ? MOCK_COMMUNITY_POSTS : null;
+      if (posts) {
+        const tabsData = [
+          { id: 'tab-route', key: 'route', label: '여행 경로', color: 'var(--warm)', catClass: 'cat-route', catStyle: '', borderClass: 'comm-tab-route' },
+          { id: 'tab-stay', key: 'stay', label: '숙소', color: 'var(--sage)', catClass: 'cat-stay', catStyle: '', borderClass: 'comm-tab-stay' },
+          { id: 'tab-food', key: 'food', label: '맛집', color: 'var(--coral)', catClass: 'cat-food', catStyle: '', borderClass: 'comm-tab-food' },
+          { id: 'tab-tour', key: 'tour', label: '관광지', color: 'var(--sky)', catClass: 'cat-tour', catStyle: '', borderClass: 'comm-tab-tour' },
+          { id: 'tab-cafe', key: 'cafe', label: '카페', color: '#A78BFA', catClass: '', catStyle: 'background:#F3F0FF;color:#7C3AED', borderClass: 'comm-tab-cafe' }
+        ];
+
+        tabsData.forEach(tab => {
+          const container = document.getElementById(tab.id);
+          const items = posts[tab.key] || [];
+          if (container) {
+            if (items.length > 0) {
+              container.innerHTML = items.map(p => `
+            <div class="post-card comm-post-item ${tab.borderClass}" onclick="go(${p.url})" data-tags="${p.tags}" data-likes="${p.likes}"
+              data-scrap="${p.scrap}" data-date="${p.dateVal}" data-author="${p.author}">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+                <span class="post-cat ${tab.catClass}" style="${tab.catStyle}">${tab.label}</span>
+                <span style="font-size:10px;color:var(--text3)">${p.author} · ${p.dateStr}</span>
+              </div>
+              <div class="post-ttl">${p.title}</div>
+              <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">
+                ${p.tagList.map(tag => `<span style="font-size:10px;color:var(--sage-d);background:var(--sage-pale);padding:2px 6px;border-radius:10px">#${tag}</span>`).join('')}
+              </div>
+              <div class="post-foot">
+                <div class="post-stats">
+                  <span class="post-stat">❤️ ${p.likes}</span>
+                  <span class="post-stat">🔖 ${p.scrap}</span>
+                  <span class="post-stat">👁 ${p.views}</span>
+                </div>
+              </div>
+            </div>
+          `).join('');
+            } else {
+              container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">등록된 게시글이 없습니다.</div>`;
+            }
+          }
+        });
+      }
+
+      // 4. 시스템 알림 데이터 주입
+      const notis = typeof MOCK_NOTIFICATIONS !== 'undefined' ? MOCK_NOTIFICATIONS : null;
+      const notiListContainer = document.getElementById('notifList');
+      if (notiListContainer && notis) {
+        notiListContainer.innerHTML = notis.map(n => `
+      <div style="padding:14px;border-bottom:1px solid var(--border2);font-size:12px;cursor:pointer" onclick="toast('알림 이동')">
+        <div style="color:var(--text2);margin-bottom:6px;line-height:1.4">${n.text}</div>
+        <div style="font-size:10px;color:var(--text3)">${n.time}</div>
+      </div>
+    `).join('') + `<div style="padding:12px;text-align:center;font-size:12px;color:var(--text3);cursor:pointer;background:var(--surface);border-radius:0 0 var(--r) var(--r)" onclick="toast('모든 알림 보기')">모든 알림 보기</div>`;
+      }
+
+      // 5. 장소리뷰 & 후기상세 기본 데이터 매핑
+      const mc = typeof MOCK_MODAL_CONTENTS !== 'undefined' ? MOCK_MODAL_CONTENTS : null;
+      if (mc) {
+        // 장소 팝업 데이터 바인딩
+        const mpPlace = document.getElementById('mpPlace'), mpType = document.getElementById('mpType'), mpReviews = document.getElementById('mpReviews'), mpLinks = document.getElementById('mpLinks');
+        if (mpPlace) mpPlace.textContent = mc.mapPlace.title;
+        if (mpType) mpType.textContent = mc.mapPlace.type;
+        if (mpReviews) mpReviews.innerHTML = mc.mapPlace.reviews.map(r => `<div class="p-rev-item" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--border2)"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:700">${r.author}</span><span>${r.rating}</span></div><div style="font-size:12px;color:var(--text2)">${r.text}</div></div>`).join('');
+        if (mpLinks) mpLinks.innerHTML = mc.mapPlace.links.map(l => `<button class="btn-o" style="flex:1;padding:8px;font-size:12px" onclick="toast('${l}로 이동')">${l}</button>`).join('');
+
+        // 리뷰상세 팝업 데이터 바인딩
+        const rdPlace = document.getElementById('rdPlace'), rdType = document.getElementById('rdType'), rdMeta = document.getElementById('rdMeta'), rdBody = document.getElementById('rdBody'), rdComments = document.getElementById('rdComments');
+        if (rdPlace) rdPlace.textContent = mc.reviewDetail.title;
+        if (rdType) rdType.textContent = mc.reviewDetail.type;
+        if (rdMeta) rdMeta.textContent = mc.reviewDetail.meta;
+        if (rdBody) rdBody.textContent = mc.reviewDetail.body;
+        if (rdComments) rdComments.innerHTML = mc.reviewDetail.comments.map(c => `<div style="font-size:12px;margin-bottom:6px;padding:6px;background:var(--surface);border-radius:4px"><strong style="color:var(--text)">${c.author}:</strong> <span style="color:var(--text2)">${c.text}</span></div>`).join('');
+      }
+
+      // 6. 후기 작성 '플랜 연동' 셀렉트 박스 바인딩
+      const planSelect = document.getElementById('writePlanSelect');
+      const planOptions = typeof MOCK_PLAN_OPTIONS !== 'undefined' ? MOCK_PLAN_OPTIONS : null;
+      if (planSelect && planOptions) {
+        planSelect.innerHTML = '<option value="">여행 플랜을 선택하세요...</option>' +
+                planOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+      }
+    }
+
+    // ⭕ 인텔리제이 에러 방지 및 안전한 화면 초기화 코드 (실행 순서 완전 해결!)
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        // 1. [가장 중요] 화면에 그릴 뼈대와 데이터를 가장 먼저 주입합니다.
+        initCommunityPageData();
+
+        // 2. 검색 함수만 세팅 (setCommTab/sortPosts 는 app_community.js + v2 의 정식 버전을 사용)
+        //    ※ 예전 인라인 정의는 서버 정렬을 무시하고 장소 탭 정렬이 안 되는 문제가 있어 제거함
+        window.doSearch = function() {
+          var type = document.getElementById('searchType').value;
+          var q = (document.getElementById('searchInp').value||'').trim().toLowerCase();
+          if (!q) { toast('검색어를 입력해주세요'); return; }
+          var found = 0;
+          document.querySelectorAll('.comm-post-item').forEach(function(item) {
+            var title  = (item.querySelector('.post-ttl')  ? item.querySelector('.post-ttl').textContent  : '').toLowerCase();
+            var tags   = (item.getAttribute('data-tags')   || '').toLowerCase();
+            var author = (item.getAttribute('data-author') || '').toLowerCase();
+            var match  = (type==='title') ? title.includes(q) :
+                    (type==='content') ? (title.includes(q)||tags.includes(q)) :
+                            (type==='author')  ? author.includes(q) : tags.includes(q);
+            item.style.display = match ? '' : 'none';
+            if (match) found++;
+          });
+          toast('"'+q+'" 검색 결과: '+found+'건');
+        };
+
+        function _hookGo() {
+          if (typeof window.go !== 'function') { setTimeout(_hookGo, 50); return; }
+          var _orig = window.go;
+          window.go = function(id, addToHistory) {
+            _orig(id, addToHistory);
+          };
+        }
+        _hookGo();
+
+
+
+        // 4. [마지막 단계] 화면 렌더링이 완벽히 끝났으므로 안심하고 메인 자바스크립트 초기화를 실행!
+        if (typeof initCommunityPage === 'function') {
+          await initCommunityPage();
+        }
+
+      } catch (error) {
+        console.error("커뮤니티 페이지 초기화 중 오류 발생:", error);
+      }
+    });
+  </script>
 
   <div class="page" id="page-community">
     <div class="comm-layout">
       <div class="comm-main">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <h2 style="font-size:22px;font-weight:800">👥 커뮤니티</h2>
-          <button class="btn-f" style="padding:7px 14px;font-size:12px" data-onclick="checkAndOpenWrite()">+ 후기 작성</button>
+          <button class="btn-f" style="padding:7px 14px;font-size:12px" onclick="checkAndOpenWrite()">+ 후기 작성</button>
         </div>
 
         <div class="comm-tabs" id="commTabs">
-          <button class="comm-tab on" data-onclick="setCommTab(this,'route')">여행 경로</button>
-          <button class="comm-tab" data-onclick="setCommTab(this,'stay')">숙소</button>
-          <button class="comm-tab" data-onclick="setCommTab(this,'food')">맛집</button>
-          <button class="comm-tab" data-onclick="setCommTab(this,'tour')">관광지</button>
-          <button class="comm-tab" data-onclick="setCommTab(this,'cafe')">카페</button>
+          <button class="comm-tab on" onclick="setCommTab(this,'route')">여행 경로</button>
+          <button class="comm-tab" onclick="setCommTab(this,'stay')">숙소</button>
+          <button class="comm-tab" onclick="setCommTab(this,'food')">맛집</button>
+          <button class="comm-tab" onclick="setCommTab(this,'tour')">관광지</button>
+          <button class="comm-tab" onclick="setCommTab(this,'cafe')">카페</button>
         </div>
 
         <div class="search-bar">
@@ -34,8 +186,8 @@
             <option value="tag">태그</option>
           </select>
           <input class="search-inp" type="text" placeholder="키워드 검색..." id="searchInp">
-          <button class="btn-search" data-onclick="doSearch()">검색</button>
-          <select class="form-input" style="width:auto;padding:7px 10px;font-size:12px;cursor:pointer" id="sortSelect" data-onchange="sortPosts(this.value)">
+          <button class="btn-search" onclick="doSearch()">검색</button>
+          <select class="form-input" style="width:auto;padding:7px 10px;font-size:12px;cursor:pointer" id="sortSelect" onchange="sortPosts(this.value)">
             <option value="latest" selected>최신순</option>
             <option value="scrap">스크랩순</option>
             <option value="views">조회수순</option>
@@ -79,16 +231,16 @@
   <div id="notifPopup" style="display:none;position:fixed;top:58px;right:190px;width:360px;background:var(--surface);border-radius:var(--r);border:1px solid var(--border2);box-shadow:0 8px 32px rgba(0,0,0,.14);z-index:1500">
     <div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:14px;font-weight:700">🔔 알림</div>
-      <button style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--text3)" data-onclick="document.getElementById('notifPopup').style.display='none'">✕</button>
+      <button style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--text3)" onclick="document.getElementById('notifPopup').style.display='none'">✕</button>
     </div>
     <div id="notifList" style="max-height:400px;overflow-y:auto;padding:8px"></div>
   </div>
 
-  <div class="overlay" id="writeModal" data-onclick="if(event.target===this)closeWrite()">
+  <div class="overlay" id="writeModal" onclick="if(event.target===this)closeWrite()">
     <div class="modal" style="width:560px;max-height:90vh;display:flex;flex-direction:column">
       <div class="modal-hd">
         <div class="modal-ttl">✍️ 후기 작성</div>
-        <button class="modal-x" data-onclick="closeWrite()">✕</button>
+        <button class="modal-x" onclick="closeWrite()">✕</button>
       </div>
       <div class="modal-bd" style="overflow-y:auto;flex:1;padding:20px">
         <div class="form-group" style="margin-bottom:12px">
@@ -97,7 +249,7 @@
         </div>
         <div class="form-group" style="margin-bottom:12px">
           <label class="form-label" for="writePlanSelect">내 여행 기록 연동 <span style="font-size:11px;font-weight:400;color:var(--text3)">(방문 장소 자동 바인딩)</span></label>
-          <select class="form-input" id="writePlanSelect" data-onchange="window._budgetSelectedTripId = this.value; onWritePlanSelect(this.value)">
+          <select class="form-input" id="writePlanSelect" onchange="window._budgetSelectedTripId = this.value; onWritePlanSelect(this.value)">
           </select>
           <div id="placeReviewsSection">
             <div class="plr-section-title">📍 장소별 별점 &amp; 한줄평 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택 사항)</span></div>
@@ -119,20 +271,20 @@
                       data-editor-id="blogEditor"
                       data-editor-command="bold"
                       style="padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:12px;font-weight:700;color:var(--text1)"
-                      data-onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('blogEditor'), '_communityWriteEditorRange')"
-                      data-onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('blogEditor'), 'bold', '_communityWriteEditorRange')">B</button>
+                      onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('blogEditor'), '_communityWriteEditorRange')"
+                      onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('blogEditor'), 'bold', '_communityWriteEditorRange')">B</button>
               <button type="button"
                       data-editor-id="blogEditor"
                       data-editor-command="italic"
                       style="padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:12px;font-style:italic;color:var(--text1)"
-                      data-onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('blogEditor'), '_communityWriteEditorRange')"
-                      data-onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('blogEditor'), 'italic', '_communityWriteEditorRange')">I</button>
+                      onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('blogEditor'), '_communityWriteEditorRange')"
+                      onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('blogEditor'), 'italic', '_communityWriteEditorRange')">I</button>
               <button type="button"
                       data-editor-id="blogEditor"
                       data-editor-command="underline"
                       style="padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:12px;text-decoration:underline;color:var(--text1)"
-                      data-onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('blogEditor'), '_communityWriteEditorRange')"
-                      data-onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('blogEditor'), 'underline', '_communityWriteEditorRange')">U</button>
+                      onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('blogEditor'), '_communityWriteEditorRange')"
+                      onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('blogEditor'), 'underline', '_communityWriteEditorRange')">U</button>
 
             </div>
             <div id="blogEditor" contenteditable="true"
@@ -144,320 +296,448 @@
           <label class="form-label">첨부 이미지</label>
           <div id="writeImagePreview" style="display:none"></div>
           <button type="button" class="btn-prev-step" style="padding:9px 14px;border-radius:10px;font-size:13px"
-                  data-onmousedown="window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('blogEditor'), '_communityWriteEditorRange')"
-                  data-onclick="window.openWriteImagePicker && window.openWriteImagePicker()">새 이미지 추가</button>
+                  onmousedown="window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('blogEditor'), '_communityWriteEditorRange')"
+                  onclick="window.openWriteImagePicker && window.openWriteImagePicker()">새 이미지 추가</button>
           <input id="writeImageInput" type="file" accept="image/*" multiple style="display:none"
-                 data-onchange="window._handleWriteImageSelect && window._handleWriteImageSelect(this)">
+                 onchange="window._handleWriteImageSelect && window._handleWriteImageSelect(this)">
         </div>
         <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:16px">
           <div style="display:flex;gap:8px">
-            <button class="btn-o" style="padding:10px 16px;font-size:13px" data-onclick="closeWrite()">취소</button>
-            <button class="btn-f" style="padding:10px 24px;font-size:13px" data-onclick="submitReview()">등록하기</button>
+            <button class="btn-o" style="padding:10px 16px;font-size:13px" onclick="closeWrite()">취소</button>
+            <button class="btn-f" style="padding:10px 24px;font-size:13px" onclick="submitReview()">등록하기</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 </div>
-<script th:src="@{/js/page/page_community_2.js}"></script>
+<script>
+
+  function renderReviewDetailPage(pageId) {
+    return;
+
+    const container = document.getElementById('page-' + pageId);
+    if (!container) return;
+
+    const starsHtml = '⭐'.repeat(data.rating || 4);
+    const placesHtml = data.places ? `
+      <div class="bcard" style="margin-bottom:18px;padding:16px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">📍 방문한 장소</div>
+        ${data.places.map(p => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border2)">
+            <div>
+              <div style="font-size:13px;font-weight:700">${p.name}</div>
+              <div style="font-size:11px;color:var(--text3)">${p.type}</div>
+            </div>
+            <div style="font-size:12px;color:var(--warm)">⭐ ${p.rating}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : (data.info ? `
+      <div class="bcard" style="margin-bottom:18px;padding:16px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">🏨 숙소 정보</div>
+        ${Object.entries(data.info).map(([k,v]) => `
+          <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px dashed var(--border2)">
+            <span style="color:var(--text3)">${k === 'price' ? '가격' : k === 'location' ? '위치' : '편의시설'}</span>
+            <span style="font-weight:600">${v}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : '');
+
+    container.querySelector('.review-wrap').innerHTML = `
+      <button class="review-back" onclick="go('community')">← 커뮤니티</button>
+      <div style="margin-bottom:10px">
+        <span class="post-cat cat-route" style="font-size:11px">${data.cat}</span>
+      </div>
+      <h1 class="review-h1">${data.title}</h1>
+      <div class="review-meta-row" style="margin-bottom:12px">
+        <span style="font-size:12px;color:var(--text3)">
+          ${data.author} · ${data.date} · ❤️ ${data.likes} · 🔖 ${data.scraps} · 👁 ${data.views}
+        </span>
+      </div>
+      ${data.rating ? `<div style="margin-bottom:14px;font-size:14px">${starsHtml} <span style="font-size:12px;color:var(--text3)">(${data.rating}.0)</span></div>` : ''}
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px">
+        ${(data.tags || []).map(t => `<span style="font-size:11px;color:var(--sage-d);background:var(--sage-pale);padding:3px 8px;border-radius:10px">#${t}</span>`).join('')}
+      </div>
+      ${placesHtml}
+      <div class="review-body">${data.body}</div>
+      <div class="comment-box" style="margin-top:24px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">댓글</div>
+        <div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;background:var(--cream2);border-radius:8px">
+          댓글 기능은 백엔드 연동 후 활성화됩니다.
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <input class="form-input" style="flex:1;padding:8px;font-size:12px" placeholder="댓글을 입력하세요...">
+          <button class="btn-f" style="padding:8px 14px;font-size:12px" onclick="toast('로그인 후 이용 가능합니다.')">등록</button>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * 장소 상세 페이지 렌더러 (place-t-*, place-c-*)
+   */
+  function renderPlaceDetailPage(pageId) {
+    // const allPlaces = { ...MOCK_TOUR_PLACES, ...MOCK_CAFE_PLACES };
+    // const data = allPlaces[pageId];
+    // if (!data) return;
+    return; // 👇 API 연동까지 기본 HTML 유지
+
+    const container = document.getElementById('page-' + pageId);
+    if (!container) return;
+
+    container.querySelector('.place-review-wrap').innerHTML = `
+      <button class="review-back" onclick="go('community')">← 커뮤니티</button>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+        <div style="font-size:36px">📍</div>
+        <div>
+          <h2 style="font-size:22px;font-weight:800;margin-bottom:4px">${data.name}</h2>
+          <div style="font-size:12px;color:var(--text3)">${data.region} · ${data.type}</div>
+          <div style="font-size:13px;margin-top:4px">⭐ <strong>${data.rating}</strong> <span style="color:var(--text3)">(리뷰 ${data.reviews.toLocaleString()}개)</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px">
+        ${(data.tags || []).map(t => `<span style="font-size:11px;color:var(--sage-d);background:var(--sage-pale);padding:3px 8px;border-radius:10px">#${t}</span>`).join('')}
+      </div>
+      <div class="bcard" style="margin-bottom:18px;padding:18px">
+        <p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px">${data.desc}</p>
+        <div style="border-top:1px dashed var(--border2);padding-top:12px">
+          <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text)">📋 방문 정보</div>
+          ${Object.entries(data.info).map(([k,v]) => `
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px dashed var(--border2)">
+              <span style="color:var(--text3)">${k === 'hours' ? '운영시간' : k === 'price' ? '입장료/가격' : '팁'}</span>
+              <span style="font-weight:500;text-align:right;max-width:60%">${v}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;background:var(--cream2);border-radius:8px">
+        상세 리뷰 목록은 백엔드 연동 후 표시됩니다.
+      </div>
+    `;
+  }
+
+  // go() 함수가 review/place 페이지로 이동할 때 데이터를 주입하기 위한 훅
+  // app_main.js의 go() 함수 실행 후 처리
+  document.addEventListener('DOMContentLoaded', function() {
+    // 페이지 전환 감지를 위해 go() 래핑
+    const _origGo = window.go;
+    if (_origGo) {
+      window.go = function(id, addToHistory) {
+        _origGo(id, addToHistory);
+        // 후기 상세 페이지
+        // (예시 데이터 MOCK_* 가 지워진 뒤에도 이 감시가 남아 화면을 옮길 때마다 ReferenceError 가 나던 것을 막음)
+        const _has = (name) => typeof window[name] !== 'undefined' && window[name] && window[name][id];
+        if (_has('MOCK_ROUTE_REVIEWS') || _has('MOCK_STAY_REVIEWS') || _has('MOCK_FOOD_REVIEWS')) {
+          setTimeout(() => renderReviewDetailPage(id), 10);
+        }
+        // 장소 상세 페이지
+        if (_has('MOCK_TOUR_PLACES') || _has('MOCK_CAFE_PLACES')) {
+          setTimeout(() => renderPlaceDetailPage(id), 10);
+        }
+      };
+    }
+  });
+</script>
 
 <div class="page" id="page-r-gangneung">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-r-jeju-gaseongbi">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-r-gyeongju">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-r-busan">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-r-jeonju">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-r-namhae">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-r-seorak">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-r-jeju-east-west">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-s-hyeopjae">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-s-anmok">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-s-haeundae">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-s-jeju-compare">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-s-sokcho">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-s-gyeongju">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-s-namhae">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-s-jeonju">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-f-jeju-top10">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-f-gangneung-cafe">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-f-busan-jagalchi">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-f-jeju-blackpig">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-f-gyeongju">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-f-busan-seafood">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-f-sokcho">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-f-jeonju">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-f-bibimbap">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-f-heukdwaeji">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-f-haundaesea">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-f-sokcho">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-f-olleisunjae">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-f-jagalchi">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-f-teraroasa-g">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-f-hwangnam">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-f-jeonjubibim">
   <div class="review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-t-seongsan">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-t-udo">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-t-ollesigang">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-t-yongduram">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-t-hyeopjaebeach">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-c-handam">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-c-arario">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-c-monsant">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-c-daraon">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>
 
 <div class="page" id="page-place-c-seohyang">
   <div class="place-review-wrap">
-    <button class="review-back" data-onclick="go('community')">← 커뮤니티</button>
+    <button class="review-back" onclick="go('community')">← 커뮤니티</button>
     <div style="padding:40px;text-align:center;color:var(--text3)">로딩 중...</div>
   </div>
 </div>

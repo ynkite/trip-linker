@@ -43,14 +43,12 @@ public class SecurityConfig {
 
     // CSP 를 실제로 적용한다(Report-Only 로 시험한 정책 그대로 + 카카오톡 공유).
     // 운영 화면에서 강제 적용으로 바꿔 확인한 것: 지도 · 장소 찾기 · 테스트 로그인 · 커뮤니티 · 날씨 · 가계부 PDF · 카카오톡 공유가 그대로 된다.
-    // - script-src 에 'unsafe-inline' 이 없다: 화면의 <script> 덩어리는 static/js/page 로 옮겼고,
-    //   onclick 같은 인라인 속성은 data-onclick 으로 바꿔 inline_handlers.js 가 실행한다(eval 없이)
-    // - style-src 의 'unsafe-inline' 은 남긴다: 화면이 style 속성을 많이 쓰고, 스타일은 스크립트를 실행하지 못한다
+    // - 'unsafe-inline' 은 아직 못 뺀다: 화면이 onclick 같은 인라인 스크립트를 수백 곳에서 쓴다
     // - 'unsafe-eval' 은 넣지 않는다: 카카오 지도 스크립트가 eval 을 한 번 시도하다 막히지만 지도는 그대로 그려진다
     // - form-action 에 카카오: 카카오톡 공유 SDK 가 sharer.kakao.com 으로 폼을 보내고 로그인(accounts.kakao.com)으로 넘긴다
     static final String CSP = String.join("; ",
             "default-src 'self'",
-            "script-src 'self' https://dapi.kakao.com https://t1.daumcdn.net https://t1.kakaocdn.net https://cdnjs.cloudflare.com",
+            "script-src 'self' 'unsafe-inline' https://dapi.kakao.com https://t1.daumcdn.net https://t1.kakaocdn.net https://cdnjs.cloudflare.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' data: https://fonts.gstatic.com",
             "img-src 'self' data: blob: https:",

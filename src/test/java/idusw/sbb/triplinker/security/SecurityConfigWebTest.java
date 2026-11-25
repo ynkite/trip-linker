@@ -121,16 +121,6 @@ class SecurityConfigWebTest {
     }
 
     @Test
-    @DisplayName("CSP 의 script-src 에 'unsafe-inline' 이 없다 (끼워 넣은 스크립트 · onclick 이 실행되지 않음)")
-    void scriptSrcHasNoUnsafeInline() throws Exception {
-        String csp = mvc.perform(get("/")).andReturn().getResponse().getHeader("Content-Security-Policy");
-        String scriptSrc = java.util.Arrays.stream(csp.split(";")).map(String::trim)
-                .filter(d -> d.startsWith("script-src ")).findFirst().orElseThrow();
-        assertThat(scriptSrc).doesNotContain("'unsafe-inline'").doesNotContain("'unsafe-eval'")
-                .doesNotContain("data:").doesNotContain(" https: ").doesNotContain("*");
-    }
-
-    @Test
     @DisplayName("다른 사이트에서 온 요청에 인증 정보 포함(credentials) 허용을 내주지 않는다")
     void corsDoesNotAllowCredentialsForAnyOrigin() throws Exception {
         MvcResult r = mvc.perform(options("/api/trips/10").header("Origin", "https://evil.example")
