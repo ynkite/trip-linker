@@ -694,7 +694,12 @@ async function tryLogin() {
     const res = await api.post('/api/auth/login', { username: id, password: pw });
 
     if (!res.success) {
-        if (res.data && res.data.locked) {
+        if (res.data && res.data.weakPassword) {
+            // 비밀번호는 맞지만 지금 규칙에 맞지 않는 옛 비밀번호 → 재설정 창으로
+            w.textContent = '⚠️ ' + (res.message || '비밀번호를 새로 정해 주세요.');
+            w.style.display = 'flex';
+            if (typeof openPwResetModal === 'function') openPwResetModal();
+        } else if (res.data && res.data.locked) {
             // [v2] 서버 잠금 응답 → 카운트다운 시작
             _startLockCountdown(res.data.remainSeconds || 300, w);
         } else {

@@ -57,11 +57,12 @@ class ExistingLoginFlowTest {
     @Test
     @DisplayName("일반 로그인: 맞는 비밀번호면 그 계정 권한으로 토큰이 나오고 기존 refresh 토큰을 지운다(종전과 같음)")
     void normalLoginUnchanged() {
-        user(1L, "user01", "1234", "USER");
-        user(2L, "admin", "1234", "ADMIN");
+        // 비밀번호는 지금 규칙에 맞는 값으로(규칙에 맞지 않는 옛 비밀번호는 WeakPasswordLoginTest 에서 막힘을 본다)
+        user(1L, "user01", "User01!pw", "USER");
+        user(2L, "admin", "Admin01!pw", "ADMIN");
 
-        TokenResponseDto u = auth.login(new LoginRequestDto("user01", "1234"), "127.0.0.1");
-        TokenResponseDto a = auth.login(new LoginRequestDto("admin", "1234"), "127.0.0.1");
+        TokenResponseDto u = auth.login(new LoginRequestDto("user01", "User01!pw"), "127.0.0.1");
+        TokenResponseDto a = auth.login(new LoginRequestDto("admin", "Admin01!pw"), "127.0.0.1");
 
         assertThat(jwt.getRoleFromToken(u.accessToken())).isEqualTo("USER");
         assertThat(jwt.getRoleFromToken(a.accessToken())).isEqualTo("ADMIN");

@@ -41,6 +41,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage(), data));
     }
 
+    // 비밀번호는 맞지만 지금 규칙에 맞지 않을 때: 토큰 없이 재설정 안내만
+    @ExceptionHandler(WeakPasswordLoginException.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleWeakPassword(WeakPasswordLoginException ex) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("weakPassword", true);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage(), data));
+    }
+
     // 남의 여행 · 지출 · 회원 정보에 손댈 때 (로그인은 했지만 주인 · 멤버가 아님)
     // 번호를 바꿔 가며 남의 것을 열어 보는 시도를 나중에 찾을 수 있게 주소와 회원 번호를 로그에 남긴다(개인정보는 안 남김).
     @ExceptionHandler(ForbiddenException.class)

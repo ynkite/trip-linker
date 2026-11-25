@@ -16,6 +16,8 @@ import idusw.sbb.triplinker.domain.user.repository.UserRepository;
 import idusw.sbb.triplinker.domain.user.repository.UserSecurityHistoryRepository;
 import idusw.sbb.triplinker.global.exception.LoginFailException;
 import idusw.sbb.triplinker.global.exception.SocialAccountExistException;
+import idusw.sbb.triplinker.global.exception.WeakPasswordLoginException;
+import idusw.sbb.triplinker.global.common.PasswordPolicy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -74,6 +76,11 @@ public class AuthServiceImpl implements AuthService {
                 throw new LoginFailException(true, user.getLoginFailCount(), Math.max(remainSeconds, 0));
             }
             throw new LoginFailException(false, user.getLoginFailCount(), 0);
+        }
+
+        // 비밀번호는 맞지만 지금 규칙에 맞지 않으면(규칙 전에 만든 쉬운 비밀번호) 토큰을 주지 않고 재설정으로 보낸다
+        if (!PasswordPolicy.isValid(request.password())) {
+            throw new WeakPasswordLoginException();
         }
 
         // 로그인 성공 시 실패 카운트 초기화
