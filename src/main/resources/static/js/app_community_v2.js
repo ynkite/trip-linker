@@ -1373,15 +1373,15 @@
                 const actionButtons = isMyComment
                     ? `
                         <span style="margin-left:auto;display:inline-flex;gap:4px;align-items:center">
-                            <button onclick="openEditCommentModal(${c.commentId}, ${curPostId})"
+                            <button data-onclick="openEditCommentModal(${c.commentId}, ${curPostId})"
                                     style="${commentActionBtnStyle}"
                                     title="댓글 수정">수정</button>
-                            <button onclick="deleteMyComment(${c.commentId}, ${curPostId})"
+                            <button data-onclick="deleteMyComment(${c.commentId}, ${curPostId})"
                                     style="${commentActionBtnStyle}"
                                     title="댓글 삭제">삭제</button>
                         </span>`
                     : `
-                        <button onclick="openReportCommentModal(${c.commentId}, ${curPostId})"
+                        <button data-onclick="openReportCommentModal(${c.commentId}, ${curPostId})"
                                 style="margin-left:auto;${commentActionBtnStyle}"
                                 title="댓글 신고">🚨 신고</button>`;
 
@@ -1403,7 +1403,7 @@
             <div style="display:flex;gap:8px;margin-bottom:14px">
                 <input id="commentInput" type="text" placeholder="댓글을 입력하세요..."
                        style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border2);font-size:13px">
-                <button class="btn-f" onclick="submitComment()">등록</button>
+                <button class="btn-f" data-onclick="submitComment()">등록</button>
             </div>
             <div id="commentList">${commentItems}</div>
         `;
@@ -1617,7 +1617,7 @@
                 ${fallbackImageUrls.map(url =>
                 `<img src="${escapeHtml(url)}" alt="첨부 이미지"
                           style="max-width:100%;border-radius:10px;display:block"
-                          onerror="this.style.display='none'">`
+                          data-onerror="this.style.display='none'">`
             ).join('')}
                </div>`
             : '';
@@ -1708,7 +1708,7 @@
                         box-shadow:0 18px 45px rgba(0,0,0,.18);box-sizing:border-box">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
                     <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">댓글 수정</h3>
-                    <button type="button" onclick="closeEditCommentModal()"
+                    <button type="button" data-onclick="closeEditCommentModal()"
                             style="width:30px;height:30px;border:none;border-radius:50%;background:var(--cream);
                                    color:var(--text3);font-size:20px;line-height:1;cursor:pointer">×</button>
                 </div>
@@ -1722,9 +1722,9 @@
                                  box-sizing:border-box;outline:none"></textarea>
 
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
-                    <button type="button" class="btn-o" onclick="closeEditCommentModal()"
+                    <button type="button" class="btn-o" data-onclick="closeEditCommentModal()"
                             style="padding:9px 16px;font-size:13px">취소</button>
-                    <button type="button" class="btn-f" onclick="submitEditComment()"
+                    <button type="button" class="btn-f" data-onclick="submitEditComment()"
                             style="padding:9px 22px;font-size:13px">등록</button>
                 </div>
             </div>
@@ -2225,7 +2225,7 @@ window._handleWriteImageSelect = function(input) {
                 : '';
 
             div.innerHTML = `
-                <div class="post-card" onclick="openPostDetail(${postId})"
+                <div class="post-card" data-onclick="openPostDetail(${postId})"
                      style="${isHidden ? 'opacity:0.55;background:#FAFAFA' : ''}">
                     <div class="community-card-head">
                         <span class="post-cat ${escapeHtml(catClass)}">${escapeHtml(catLabel)}</span>
@@ -2496,7 +2496,7 @@ window._handleWriteImageSelect = function(input) {
                 <strong>🧳 연결된 플랜</strong>
                 <span class="review-plan-summary">${escapeHtml(getPlanSummary(post, routeData))}</span>
             </div>
-            <button id="btn-plan-preview" type="button" class="btn-plan-preview" onclick="openCommunityPlanPreview()">미리보기</button>
+            <button id="btn-plan-preview" type="button" class="btn-plan-preview" data-onclick="openCommunityPlanPreview()">미리보기</button>
         `;
     }
 
@@ -2546,7 +2546,7 @@ window._handleWriteImageSelect = function(input) {
                              data-place-id="${r.placeId}"
                              data-place-name="${escapeHtml(r.placeName||'')}"
                              data-category="${r.category||'attraction'}"
-                             onclick="_placeSnapshotClick(this)">
+                             data-onclick="_placeSnapshotClick(this)">
                             <div class="review-place-snapshot-top">
                                 <strong class="review-place-snapshot-name">${escapeHtml(r.placeName || '')}</strong>
                                 <b class="review-place-snapshot-stars">${escapeHtml(r.starsHtml || '')}</b>
@@ -2657,7 +2657,7 @@ window._handleWriteImageSelect = function(input) {
 
         overlay.innerHTML = `
             <div class="community-plan-preview-modal">
-                <button class="community-plan-preview-close" type="button" onclick="closeCommunityPlanPreview()">×</button>
+                <button class="community-plan-preview-close" type="button" data-onclick="closeCommunityPlanPreview()">×</button>
                 <div class="community-plan-preview-badges"><span>시즌 큐레이션</span><span>초여름</span></div>
                 <h2 id="cpp-title">플랜 미리보기</h2>
                 <div class="community-plan-preview-stats">
@@ -3056,7 +3056,7 @@ window._handleWriteImageSelect = function(input) {
 
         box.innerHTML = tags.map(t => `
             <button type="button" class="chip chip-sm community-side-tag" title="${escapeHtml(t.count)}개 글"
-                    onclick="handleCommunitySideTag('${escapeHtml(t.name)}', this)">
+                    data-onclick="handleCommunitySideTag('${escapeHtml(t.name)}', this)">
                 #${escapeHtml(t.name)}
             </button>
         `).join('');
@@ -3090,7 +3090,7 @@ window._handleWriteImageSelect = function(input) {
         const matchCount = Math.max(1, tags.length + (likes > 0 ? 1 : 0) + (scraps > 0 ? 1 : 0));
 
         box.innerHTML = `
-            <div class="community-ai-simple-card" onclick="openPostDetail(${post.postId})">
+            <div class="community-ai-simple-card" data-onclick="openPostDetail(${post.postId})">
                 <div class="community-ai-simple-cat">${escapeHtml(post.catLabel || '여행 경로')}</div>
                 <div class="community-ai-simple-title">${escapeHtml(post.title)}</div>
                 <div class="community-ai-simple-match">취향 일치 ${escapeHtml(matchCount)}개</div>
@@ -4040,7 +4040,7 @@ window._handleWriteImageSelect = function(input) {
                 `<div class="place-avg-score">${avg.toFixed(1)}</div>`,
                 `<div class="place-avg-count">${cnt}개 후기</div>`,
                 `<button class="place-review-scrap-btn${alreadyScrapped ? ' scrapped' : ''}"`,
-                `        onclick="doCommPlaceScrapToggle(this, ${placeId},'${type}')">`,
+                `        data-onclick="doCommPlaceScrapToggle(this, ${placeId},'${type}')">`,
                 `  <span class="prs-star">★</span> <span class="prs-label">스크랩</span>`,
                 `</button>`,
                 `<div class="place-map-links">`,
@@ -4173,7 +4173,7 @@ window._handleWriteImageSelect = function(input) {
                     `  <div class="plr-icon ${TYPE_CSS[type] || 'pr-tour'}">${TYPE_ICON[type] || '📍'}</div>`,
                     `  <div class="plr-name">${escapeHtml(p.name)}</div>`,
                     `  <div class="star-sel" data-rating="0">`,
-                    [1,2,3,4,5].map(n => `<button class="star-btn" onclick="setStars(this,${n})">★</button>`).join(''),
+                    [1,2,3,4,5].map(n => `<button class="star-btn" data-onclick="setStars(this,${n})">★</button>`).join(''),
                     `  </div>`,
                     `  <input class="one-line" placeholder="한줄평 (선택)" maxlength="200">`,
                     `</div>`
@@ -4363,7 +4363,7 @@ window._handleWriteImageSelect = function(input) {
         const catClass = post.catClass || '';
 
         return `
-                <div class="post-card" data-my-post-id="${escapeHtml(postId)}" onclick="openPostDetail(${escapeHtml(postId)})">
+                <div class="post-card" data-my-post-id="${escapeHtml(postId)}" data-onclick="openPostDetail(${escapeHtml(postId)})">
                     <span class="post-cat ${escapeHtml(catClass)}">${escapeHtml(category)}</span>
                     <div class="post-ttl" style="margin-top:5px">${escapeHtml(title)}</div>
                     <div class="post-foot">
@@ -4372,8 +4372,8 @@ window._handleWriteImageSelect = function(input) {
                             ${views ? `<span class="post-stat">👁 ${escapeHtml(views)}</span>` : ''}
                         </div>
                         <div style="display:flex;gap:6px">
-                            <button class="btn-scrap" onclick="event.stopPropagation(); editMyPost(${escapeHtml(postId)})">✏️ 수정</button>
-                            <button class="btn-scrap" style="color:var(--coral);border-color:var(--coral)" onclick="event.stopPropagation(); deleteMyPost(${escapeHtml(postId)})">삭제</button>
+                            <button class="btn-scrap" data-onclick="event.stopPropagation(); editMyPost(${escapeHtml(postId)})">✏️ 수정</button>
+                            <button class="btn-scrap" style="color:var(--coral);border-color:var(--coral)" data-onclick="event.stopPropagation(); deleteMyPost(${escapeHtml(postId)})">삭제</button>
                         </div>
                     </div>
                 </div>
@@ -4389,7 +4389,7 @@ window._handleWriteImageSelect = function(input) {
         const catClass = post.catClass || '';
 
         return `
-                <div class="post-card" data-my-liked-post-id="${escapeHtml(postId)}" onclick="openPostDetail(${escapeHtml(postId)})">
+                <div class="post-card" data-my-liked-post-id="${escapeHtml(postId)}" data-onclick="openPostDetail(${escapeHtml(postId)})">
                     <span class="post-cat ${escapeHtml(catClass)}">${escapeHtml(category)}</span>
                     <div class="post-ttl" style="margin-top:5px">${escapeHtml(title)}</div>
                     <div class="post-foot">
@@ -4614,20 +4614,20 @@ window._handleWriteImageSelect = function(input) {
                                     data-editor-id="communityEditContent"
                                     data-editor-command="bold"
                                     style="padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:12px;font-weight:700;color:var(--text1)"
-                                    onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('communityEditContent'), '_communityEditEditorRange')"
-                                    onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('communityEditContent'), 'bold', '_communityEditEditorRange')">B</button>
+                                    data-onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('communityEditContent'), '_communityEditEditorRange')"
+                                    data-onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('communityEditContent'), 'bold', '_communityEditEditorRange')">B</button>
                             <button type="button"
                                     data-editor-id="communityEditContent"
                                     data-editor-command="italic"
                                     style="padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:12px;font-style:italic;color:var(--text1)"
-                                    onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('communityEditContent'), '_communityEditEditorRange')"
-                                    onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('communityEditContent'), 'italic', '_communityEditEditorRange')">I</button>
+                                    data-onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('communityEditContent'), '_communityEditEditorRange')"
+                                    data-onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('communityEditContent'), 'italic', '_communityEditEditorRange')">I</button>
                             <button type="button"
                                     data-editor-id="communityEditContent"
                                     data-editor-command="underline"
                                     style="padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:12px;text-decoration:underline;color:var(--text1)"
-                                    onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('communityEditContent'), '_communityEditEditorRange')"
-                                    onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('communityEditContent'), 'underline', '_communityEditEditorRange')">U</button>
+                                    data-onmousedown="event.preventDefault(); window._commUtil && window._commUtil.saveEditorSelection(document.getElementById('communityEditContent'), '_communityEditEditorRange')"
+                                    data-onclick="window._commUtil && window._commUtil.applyEditorCommand(document.getElementById('communityEditContent'), 'underline', '_communityEditEditorRange')">U</button>
                         </div>
                         <div id="communityEditContent" contenteditable="true" data-placeholder="내용을 입력하세요" style="min-height:220px;
                         padding:14px;font-size:13px;color:var(--text);line-height:1.8;outline:none;font-family:inherit;overflow-y:auto;
@@ -4693,7 +4693,7 @@ window._handleWriteImageSelect = function(input) {
         // empty.style.display = 'none';
         // box.innerHTML = urls.map(url => `
         //     <div class="community-edit-image-item" data-image-url="${escapeHtml(url)}" style="position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff">
-        //         <img src="${escapeHtml(url)}" alt="첨부 이미지" style="width:100%;height:110px;object-fit:cover;display:block" onerror="this.style.display='none'">
+        //         <img src="${escapeHtml(url)}" alt="첨부 이미지" style="width:100%;height:110px;object-fit:cover;display:block" data-onerror="this.style.display='none'">
         //         <button type="button" class="community-edit-image-delete"
         //                 data-post-id="${escapeHtml(postId)}" data-image-url="${escapeHtml(url)}"
         //                 style="width:100%;border:none;border-top:1px solid var(--border);background:#FEF3F2;color:var(--coral);padding:8px 0;font-size:12px;font-weight:800;cursor:pointer;">이미지 삭제</button>
@@ -4936,7 +4936,7 @@ window._handleWriteImageSelect = function(input) {
                         var comment = existing ? (existing.comment || '') : '';
                         var reviewId = existing ? existing.id : '';
                         var stars = [1,2,3,4,5].map(function(n) {
-                            return '<button class="star-btn' + (n <= rating ? ' lit' : '') + '" onclick="setStars(this,' + n + ')">★</button>';
+                            return '<button class="star-btn' + (n <= rating ? ' lit' : '') + '" data-onclick="setStars(this,' + n + ')">★</button>';
                         }).join('');
                         return '<div class="plr-row" data-place-name="' + escapeHtml(p.name) + '" data-place-type="' + type + '"' + (reviewId ? ' data-review-id="' + reviewId + '"' : '') + '>' +
                             '<div class="plr-icon ' + css + '">' + icon + '</div>' +
@@ -4950,7 +4950,7 @@ window._handleWriteImageSelect = function(input) {
                     plrSection.style.display = 'block';
                     plrBody.innerHTML = existingReviews.map(function(r) {
                         var stars = [1,2,3,4,5].map(function(n) {
-                            return '<button class="star-btn' + (n <= (r.rating||0) ? ' lit' : '') + '" onclick="setStars(this,' + n + ')">★</button>';
+                            return '<button class="star-btn' + (n <= (r.rating||0) ? ' lit' : '') + '" data-onclick="setStars(this,' + n + ')">★</button>';
                         }).join('');
                         return '<div class="plr-row" data-place-name="' + escapeHtml(r.placeName||'') + '" data-place-type="' + (r.category||'tour').toLowerCase() + '" data-review-id="' + r.id + '">' +
                             '<div class="plr-icon pr-tour">📍</div>' +
@@ -4994,7 +4994,7 @@ window._handleWriteImageSelect = function(input) {
             '<div class="pc-meta">' + escapeHtml(s.address || labelMap[s.category] || '') + '</div>' +
             (s.avgRating ? '<div style="color:var(--warm);font-size:12px;margin-top:2px">' + starHtml(s.avgRating) + '</div>' : '') +
             '</div>' +
-            '<button onclick="event.stopPropagation();window.deleteMyPlaceScrap(' + s.scrapId + ',this,\'' + escapeHtml(category) + '\')" ' +
+            '<button data-onclick="event.stopPropagation();window.deleteMyPlaceScrap(' + s.scrapId + ',this,\'' + escapeHtml(category) + '\')" ' +
             'style="font-size:11px;background:none;border:1px solid var(--border2);border-radius:5px;padding:2px 7px;cursor:pointer;color:var(--coral);flex-shrink:0">' +
             '🗑️ 삭제' +
             '</button>' +
@@ -5042,7 +5042,7 @@ window._handleWriteImageSelect = function(input) {
 
         // 탭 전환 후 장소 후기 열기
         setTimeout(function () {
-            const tabBtn = document.querySelector('#commTabs .comm-tab[onclick*="\'' + type + '\'"]');
+            const tabBtn = document.querySelector('#commTabs .comm-tab[data-onclick*="\'' + type + '\'"]');
             if (tabBtn && typeof window.setCommTab === 'function') {
                 window.setCommTab(tabBtn, type);
             }
@@ -5130,15 +5130,15 @@ window._handleWriteImageSelect = function(input) {
 
         if (window._myRouteScrapDeleteMode) {
             actionBox.innerHTML =
-                '<button type="button" onclick="execMyRouteScrapBulkDelete()" ' +
+                '<button type="button" data-onclick="execMyRouteScrapBulkDelete()" ' +
                 'style="padding:4px 10px;background:var(--coral);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">선택 삭제 실행</button>' +
-                '<button type="button" onclick="toggleMyRouteScrapDeleteMode(false)" ' +
+                '<button type="button" data-onclick="toggleMyRouteScrapDeleteMode(false)" ' +
                 'style="padding:4px 10px;background:var(--cream);color:var(--text2);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">취소</button>';
             return;
         }
 
         actionBox.innerHTML =
-            '<button type="button" onclick="toggleMyRouteScrapDeleteMode(true)" ' +
+            '<button type="button" data-onclick="toggleMyRouteScrapDeleteMode(true)" ' +
             'style="padding:4px 10px;background:var(--cream);color:var(--text2);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">삭제하기</button>';
     }
 
@@ -5154,14 +5154,14 @@ window._handleWriteImageSelect = function(input) {
             : '';
 
         const cardClickAction = window._myRouteScrapDeleteMode
-            ? "const chk = document.getElementById('chk-route-scrap-" + postId + "'); if(chk) chk.checked = !chk.checked;"
+            ? "_toggleCheckbox('chk-route-scrap-" + postId + "')"
             : 'window.goToScrapRoute(' + postId + ')';
 
         return '' +
-            '<div class="trip-card" onclick="' + cardClickAction + '" ' +
+            '<div class="trip-card" data-onclick="' + cardClickAction + '" ' +
             'style="cursor:pointer;position:relative;display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--r);border:2px solid var(--border);background:var(--surface);margin-bottom:10px;transition:all .2s;">' +
             (window._myRouteScrapDeleteMode
-                ? '<input type="checkbox" class="route-scrap-del-chk" id="chk-route-scrap-' + escapeHtml(postId) + '" value="' + escapeHtml(postId) + '" onclick="event.stopPropagation();" style="width:16px;height:16px;cursor:pointer;margin-left:4px;">'
+                ? '<input type="checkbox" class="route-scrap-del-chk" id="chk-route-scrap-' + escapeHtml(postId) + '" value="' + escapeHtml(postId) + '" data-onclick="event.stopPropagation();" style="width:16px;height:16px;cursor:pointer;margin-left:4px;">'
                 : '') +
             '<div style="width:42px;height:42px;border-radius:10px;background:var(--sage);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;">🗺️</div>' +
             '<div class="trip-info" style="flex:1;min-width:0;">' +

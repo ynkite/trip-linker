@@ -962,15 +962,15 @@ function _renderMyPagePagerHtml(currentPage, totalPages, callBuilder) {
     let html = '<div class="community-v2-pagination mypage-section-pagination" style="margin-top:24px;padding-bottom:20px;">';
 
     if (totalPages > 1) {
-        html += '<button type="button" class="community-v2-page-btn" onclick="' + callBuilder(Math.max(1, current - 1)) + '" ' + (current === 1 ? 'disabled' : '') + '>&lt;</button>';
+        html += '<button type="button" class="community-v2-page-btn" data-onclick="' + callBuilder(Math.max(1, current - 1)) + '" ' + (current === 1 ? 'disabled' : '') + '>&lt;</button>';
     }
 
     pages.forEach(function (p) {
-        html += '<button type="button" class="community-v2-page-btn ' + (p === current ? 'on' : '') + '" onclick="' + callBuilder(p) + '">' + p + '</button>';
+        html += '<button type="button" class="community-v2-page-btn ' + (p === current ? 'on' : '') + '" data-onclick="' + callBuilder(p) + '">' + p + '</button>';
     });
 
     if (totalPages > 1) {
-        html += '<button type="button" class="community-v2-page-btn" onclick="' + callBuilder(Math.min(Number(totalPages), current + 1)) + '" ' + (current === Number(totalPages) ? 'disabled' : '') + '>&gt;</button>';
+        html += '<button type="button" class="community-v2-page-btn" data-onclick="' + callBuilder(Math.min(Number(totalPages), current + 1)) + '" ' + (current === Number(totalPages) ? 'disabled' : '') + '>&gt;</button>';
     }
 
     html += '</div>';
@@ -1004,10 +1004,10 @@ function _renderMyInvitedTrips(trips = null, page = 1) {
     <h3 class="my-sec-ttl" style="margin:0;">초대받은 일정</h3>
     <div style="display:flex; gap:8px; margin-left:auto;">
       ${window._invitedDeleteMode ? `
-        <button onclick="execInvitedBulkDelete()" style="padding:4px 10px; background:var(--coral); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">선택 삭제 실행</button>
-        <button onclick="toggleInvitedDeleteMode(false)" style="padding:4px 10px; background:var(--cream); color:var(--text2); border:1px solid var(--border); border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">취소</button>
+        <button data-onclick="execInvitedBulkDelete()" style="padding:4px 10px; background:var(--coral); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">선택 삭제 실행</button>
+        <button data-onclick="toggleInvitedDeleteMode(false)" style="padding:4px 10px; background:var(--cream); color:var(--text2); border:1px solid var(--border); border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">취소</button>
       ` : `
-        <button onclick="toggleInvitedDeleteMode(true)" style="padding:4px 10px; background:var(--cream); color:var(--text2); border:1px solid var(--border); border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">삭제하기</button>
+        <button data-onclick="toggleInvitedDeleteMode(true)" style="padding:4px 10px; background:var(--cream); color:var(--text2); border:1px solid var(--border); border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">삭제하기</button>
       `}
     </div>
   </div>
@@ -1017,13 +1017,13 @@ function _renderMyInvitedTrips(trips = null, page = 1) {
         html += paginated.map(x => {
             // 🎯 삭제 모드일 때는 클릭 시 체크박스가 눌리게 하고, 평소에는 링크로 이동
             const cardClickAction = window._invitedDeleteMode
-                ? `const chk = document.getElementById('chk-invited-${x.id}'); if(chk) chk.checked = !chk.checked;`
-                : `window.location.href='${x.url}'`;
+                ? `_toggleCheckbox('chk-invited-${x.id}')`
+                : `_goToUrl('${x.url}')`;
 
             return `
-      <div class="trip-card" onclick="${cardClickAction}" style="cursor:pointer; position:relative; display:flex; align-items:center; gap:12px;"> 
+      <div class="trip-card" data-onclick="${cardClickAction}" style="cursor:pointer; position:relative; display:flex; align-items:center; gap:12px;"> 
         ${window._invitedDeleteMode ? `
-          <input type="checkbox" class="invited-del-chk" id="chk-invited-${x.id}" value="${x.id}" onclick="event.stopPropagation();" style="width:16px; height:16px; cursor:pointer; margin-left:4px;">
+          <input type="checkbox" class="invited-del-chk" id="chk-invited-${x.id}" value="${x.id}" data-onclick="event.stopPropagation();" style="width:16px; height:16px; cursor:pointer; margin-left:4px;">
         ` : ''}
         <div class="trip-thumb">🤝</div>
         <div class="trip-info" style="flex:1;">
@@ -1111,10 +1111,10 @@ function _renderMyTrips(trips = null, page = 1) {
     <h3 class="my-sec-ttl" style="margin:0;">내 여행 기록</h3>
     <div style="display:flex; gap:8px; margin-left:auto;">
       ${window._myTripsDeleteMode ? `
-        <button onclick="execMyTripsBulkDelete()" style="padding:4px 10px; background:var(--coral); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">선택 삭제 실행</button>
-        <button onclick="toggleMyTripsDeleteMode(false)" style="padding:4px 10px; background:var(--cream); color:var(--text2); border:1px solid var(--border); border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">취소</button>
+        <button data-onclick="execMyTripsBulkDelete()" style="padding:4px 10px; background:var(--coral); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">선택 삭제 실행</button>
+        <button data-onclick="toggleMyTripsDeleteMode(false)" style="padding:4px 10px; background:var(--cream); color:var(--text2); border:1px solid var(--border); border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">취소</button>
       ` : `
-        <button onclick="toggleMyTripsDeleteMode(true)" style="padding:4px 10px; background:var(--cream); color:var(--text2); border:1px solid var(--border); border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">삭제하기</button>
+        <button data-onclick="toggleMyTripsDeleteMode(true)" style="padding:4px 10px; background:var(--cream); color:var(--text2); border:1px solid var(--border); border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">삭제하기</button>
       `}
     </div>
   </div>`;
@@ -1141,16 +1141,16 @@ function _renderMyTrips(trips = null, page = 1) {
 
             // 🎯 삭제 모드일 때 클릭하면 체크박스가 눌리도록 로직 분기
             const cardClickAction = window._myTripsDeleteMode
-                ? `const chk = document.getElementById('chk-mytrip-${x.id || x.tripId}'); if(chk) chk.checked = !chk.checked;`
+                ? `_toggleCheckbox('chk-mytrip-${x.id || x.tripId}')`
                 : `openMyTrip(${x.id || x.tripId})`;
 
             return `
-      <div class="trip-card" onclick="${cardClickAction}"
+      <div class="trip-card" data-onclick="${cardClickAction}"
            style="cursor:pointer; position:relative; display:flex; align-items:center; gap:14px;
                   padding:14px 16px; border-radius:var(--r); border:2px solid var(--border);
                   background:var(--surface); margin-bottom:10px; transition:all .2s;">
         ${window._myTripsDeleteMode ? `
-          <input type="checkbox" class="mytrip-del-chk" id="chk-mytrip-${x.id || x.tripId}" value="${x.id || x.tripId}" onclick="event.stopPropagation();" style="width:16px; height:16px; cursor:pointer; margin-left:4px;">
+          <input type="checkbox" class="mytrip-del-chk" id="chk-mytrip-${x.id || x.tripId}" value="${x.id || x.tripId}" data-onclick="event.stopPropagation();" style="width:16px; height:16px; cursor:pointer; margin-left:4px;">
         ` : ''}
         <div style="width:42px;height:42px;border-radius:10px;background:var(--sage);
                     display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🗺️</div>
@@ -1265,8 +1265,8 @@ async function _renderMyReviews() {
       <div class="post-foot">
         <div class="post-stats"><span class="post-stat">❤️ ${r.likes}</span>${r.views ? `<span class="post-stat">👁 ${r.views}</span>` : ''}</div>
         <div style="display:flex;gap:6px">
-          <button class="btn-scrap" onclick="event.stopPropagation();openMyReviewEdit(${r.postId})">✏️ 수정</button>
-          <button class="btn-scrap" style="color:var(--coral);border-color:var(--coral)" onclick="event.stopPropagation();deleteMyPost(${r.postId})">삭제</button>
+          <button class="btn-scrap" data-onclick="event.stopPropagation();openMyReviewEdit(${r.postId})">✏️ 수정</button>
+          <button class="btn-scrap" style="color:var(--coral);border-color:var(--coral)" data-onclick="event.stopPropagation();deleteMyPost(${r.postId})">삭제</button>
         </div>
       </div>
     </div>
@@ -1339,7 +1339,7 @@ function buildEditHTML(u, isSocial) {
         mbtiHtml += `<div class="chip-row" style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap"><span style="font-size:11px;color:var(--text3);width:38px;flex-shrink:0">${d.k.toUpperCase()}</span>`;
         d.pairs.forEach(p => {
             const on = mbtiStr[i] === p[0] ? ' on' : '';
-            mbtiHtml += `<button class="chip chip-sm${on}" onclick="pick(this)">${p[1]}</button>`;
+            mbtiHtml += `<button class="chip chip-sm${on}" data-onclick="pick(this)">${p[1]}</button>`;
         });
         mbtiHtml += '</div>';
     });
@@ -1353,14 +1353,14 @@ function buildEditHTML(u, isSocial) {
     const provinceOpts = provinces.map(p => `<option${p===savedProvince?' selected':''}>${p}</option>`).join('');
     const cities = cityData[savedProvince] || [];
     const cityOpts = '<option value="">시/군/구 선택</option>' + cities.map(c => `<option${c===savedCity?' selected':''}>${c}</option>`).join('');
-    const regionHtml = `<div class="form-group"><label class="form-label">거주 지역</label><div style="display:flex;gap:8px;margin-top:4px"><select class="form-input" id="edit-region-big" onchange="updateCity(this,'edit-region-city')" style="flex:1"><option value="">도/시 선택</option>${provinceOpts}</select><select class="form-input" id="edit-region-city" style="flex:1">${cityOpts}</select></div></div>`;
+    const regionHtml = `<div class="form-group"><label class="form-label">거주 지역</label><div style="display:flex;gap:8px;margin-top:4px"><select class="form-input" id="edit-region-big" data-onchange="updateCity(this,'edit-region-city')" style="flex:1"><option value="">도/시 선택</option>${provinceOpts}</select><select class="form-input" id="edit-region-city" style="flex:1">${cityOpts}</select></div></div>`;
     const pwHtml = isSocial ? '' : `<hr style="border:none;border-top:1px solid var(--border2);margin:14px 0"><div class="form-group"><label class="form-label">새 비밀번호</label><input class="form-input" type="password" id="edit-newpw" placeholder="새 비밀번호 8자 이상"></div><div class="form-group"><label class="form-label">새 비밀번호 확인</label><input class="form-input" type="password" id="edit-newpw2" placeholder="새 비밀번호 재입력"></div>`;
     const ds = 'style="background:var(--cream2);color:var(--text3);cursor:not-allowed"';
     const socialNotice = isSocial ? `<div style="background:#FFF9E6;border:1px solid #FEE500;border-radius:9px;padding:10px 14px;font-size:12px;color:#6B5A00;margin-bottom:14px">🟡 카카오 계정: 아이디·이메일·비밀번호는 카카오에서 관리됩니다.</div>` : '';
     return socialNotice
         + `<div class="form-row"><div class="form-group"><label class="form-label">아이디 <span style="font-size:10px;color:var(--text3)">(변경 불가)</span></label><input class="form-input" value="${u.username||''}" disabled ${ds}></div><div class="form-group"><label class="form-label">이름</label><input class="form-input" id="edit-name" value="${u.name||''}"></div></div>`
         + `<div class="form-group"><label class="form-label">이메일 <span style="font-size:10px;color:var(--text3)">(변경 불가)</span></label><input class="form-input" value="${_maskEmail(u.email||'')}" disabled ${ds}></div>`
-        + `<div class="form-row"><div class="form-group"><label class="form-label">생년월일</label><input class="form-input" type="date" id="edit-birth" value="${u.birthDate||''}"></div><div class="form-group"><label class="form-label">성별</label><div class="chip-row" style="margin-top:4px"><button class="chip${u.gender==='M'?' on':''}" onclick="pick(this,'edit-gender')">남성</button><button class="chip${u.gender==='F'?' on':''}" onclick="pick(this,'edit-gender')">여성</button><button class="chip" onclick="pick(this,'edit-gender')">기타</button></div></div></div>`
+        + `<div class="form-row"><div class="form-group"><label class="form-label">생년월일</label><input class="form-input" type="date" id="edit-birth" value="${u.birthDate||''}"></div><div class="form-group"><label class="form-label">성별</label><div class="chip-row" style="margin-top:4px"><button class="chip${u.gender==='M'?' on':''}" data-onclick="pick(this,'edit-gender')">남성</button><button class="chip${u.gender==='F'?' on':''}" data-onclick="pick(this,'edit-gender')">여성</button><button class="chip" data-onclick="pick(this,'edit-gender')">기타</button></div></div></div>`
         + regionHtml + mbtiHtml + pwHtml;
 }
 
@@ -1566,7 +1566,7 @@ function closeNotifPopup() {
 //           <div style="font-size:12px;color:var(--text2);line-height:1.6">${n.content || ''}</div>
 //           <div style="font-size:10px;color:var(--text3);margin-top:4px">${n.createdAt ? n.createdAt.substring(0,10) : ''}</div>
 //         </div>
-//         <button onclick="deleteNotif(${n.id})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;flex-shrink:0">✕</button>
+//         <button data-onclick="deleteNotif(${n.id})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;flex-shrink:0">✕</button>
 //       </div>
 //     </div>`).join('');
 //
@@ -1620,7 +1620,7 @@ function renderNotifList() {
           <div style="font-size:12px;color:var(--text2);line-height:1.7;word-break:keep-all;overflow-wrap:break-word">${formatNotifContent(n)}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:4px">${n.createdAt ? n.createdAt.substring(0,10) : ''}</div>
         </div>
-        <button onclick="deleteNotif(${n.id})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;flex-shrink:0">✕</button>
+        <button data-onclick="deleteNotif(${n.id})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;flex-shrink:0">✕</button>
       </div>
     </div>`).join('');
 
@@ -1679,7 +1679,7 @@ async function showMapPlacePopup(key, type) {
     reviews.forEach((r, i) => {
         const stars = starsOf(r);
         h += `<div style="background:var(--cream);border-radius:10px;padding:12px;margin-bottom:9px;cursor:pointer"
-               onclick="_mpOpenReview(${i})">
+               data-onclick="_mpOpenReview(${i})">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
         <div style="width:26px;height:26px;border-radius:50%;background:var(--sage);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${_escSafe((r.reviewerName||'?')[0])}</div>
         <span style="font-size:12px;font-weight:700">${_escSafe(r.reviewerName||'익명')}</span>
@@ -2013,7 +2013,7 @@ async function sendMsg() {
                     row.id = rowId;
                     row.className = 'asc-row';
                     // AI 답에서 꺼낸 글이라 HTML 로 넣지 않는다 (LLM 출력을 그대로 innerHTML 하지 않음)
-                    row.innerHTML = `<div class="asc-label">${escapeHtmlBubble(label)}</div><div class="asc-val">${escapeHtmlBubble(value)}</div><button class="asc-del" onclick="event.stopPropagation();
+                    row.innerHTML = `<div class="asc-label">${escapeHtmlBubble(label)}</div><div class="asc-val">${escapeHtmlBubble(value)}</div><button class="asc-del" data-onclick="event.stopPropagation();
                 clearExtraRow('${escapeHtmlBubble(label.replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}')">✕</button>`;
                     extraContainer.appendChild(row);
                 } else {
@@ -2239,7 +2239,7 @@ function addBubble(txt, role, qrs, isHtml) {
         // 아니면 AI 응답이므로 마크다운 변환 + 이스케이프 처리
         const inner = isHtml ? txt : formatBotReply(txt);
         d.innerHTML = `<div class="cav bot">🤖</div><div><div class="cbubble bot">${inner}</div>`
-            + (qrs ? '<div class="qr-row">' + qrs.map(q => `<button class="qr-btn" onclick="document.getElementById('chatInp').value='${q}';sendMsg()">${q}</button>`).join('') + '</div>' : '')
+            + (qrs ? '<div class="qr-row">' + qrs.map(q => `<button class="qr-btn" data-onclick="_sendQuickReply('${q}')">${q}</button>`).join('') + '</div>' : '')
             + '</div>';
     } else {
         d.innerHTML = `<div class="cav user">나</div><div><div class="cbubble user">${escapeHtmlBubble(txt)}</div></div>`;
@@ -2632,7 +2632,7 @@ function _applyCurationPreferences(c) {
             recoRows.forEach(item => {
                 const row = document.createElement('div');
                 row.className = 'asc-row';
-                row.innerHTML = `<div class="asc-label">${escapeHtmlBubble(item.label)}</div><div class="asc-val">${escapeHtmlBubble(item.value)}</div><button class="asc-del" onclick="event.stopPropagation();clearExtraRow('${escapeHtmlBubble(String(item.label).replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}')">✕</button>`;
+                row.innerHTML = `<div class="asc-label">${escapeHtmlBubble(item.label)}</div><div class="asc-val">${escapeHtmlBubble(item.value)}</div><button class="asc-del" data-onclick="event.stopPropagation();clearExtraRow('${escapeHtmlBubble(String(item.label).replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}')">✕</button>`;
                 extraContainer.appendChild(row);
             });
             const emptyMsg = document.getElementById('extra-empty-msg');
@@ -3043,7 +3043,7 @@ function renderQ() {
     if(_q.length===0){box.classList.remove('has');cnt.textContent='0';if(btn)btn.disabled=true;items.innerHTML='';return;}
     box.classList.add('has'); box.style.display='block'; cnt.textContent=_q.length;
     if(btn) btn.disabled=false;
-    items.innerHTML=_q.map((q,i)=>`<div class="q-item"><div style="flex:1"><div class="q-place">📍 ${q.place}</div><div class="q-req">"${q.req}"</div></div><button class="q-rm" onclick="rmQ(${i})">✕</button></div>`).join('');
+    items.innerHTML=_q.map((q,i)=>`<div class="q-item"><div style="flex:1"><div class="q-place">📍 ${q.place}</div><div class="q-req">"${q.req}"</div></div><button class="q-rm" data-onclick="rmQ(${i})">✕</button></div>`).join('');
 }
 function rmQ(i) { _q.splice(i,1); renderQ(); toast('요청 제거됨'); }
 function closeQueue() { document.getElementById('queueBox').classList.remove('has'); document.getElementById('queueBox').style.display='none'; document.getElementById('queueToggle').style.display='block'; }
@@ -3134,8 +3134,8 @@ function addDay() {
     div.innerHTML=`<div class="pdb-hd" style="border-bottom:1px solid var(--border2);padding-bottom:8px;margin-bottom:8px">
     <span style="font-weight:800;color:var(--sage-d)">Day ${_dayN}</span>
     <div style="display:flex;gap:6px">
-      <button style="font-size:11px;background:var(--sage-pale);border:1px solid var(--sage-l);border-radius:5px;padding:3px 9px;cursor:pointer;color:var(--sage-d)" onclick="addPlanItem(this)">+ 장소 추가</button>
-      <button style="font-size:11px;background:#FEF3F2;border:1px solid #FECACA;border-radius:5px;padding:3px 7px;cursor:pointer;color:var(--coral)" onclick="removeDay(this)">✕</button>
+      <button style="font-size:11px;background:var(--sage-pale);border:1px solid var(--sage-l);border-radius:5px;padding:3px 9px;cursor:pointer;color:var(--sage-d)" data-onclick="addPlanItem(this)">+ 장소 추가</button>
+      <button style="font-size:11px;background:#FEF3F2;border:1px solid #FECACA;border-radius:5px;padding:3px 7px;cursor:pointer;color:var(--coral)" data-onclick="removeDay(this)">✕</button>
     </div></div>
     <div style="font-size:11px;color:var(--text3);padding:6px;text-align:center">장소를 추가해주세요</div>`;
     document.getElementById('curDays').appendChild(div);
@@ -3148,7 +3148,7 @@ function addPlanItem(btn) {
     div.innerHTML=`<div style="display:flex;align-items:center;gap:8px;width:100%">
     <span class="pdb-type-icon">📍</span>
     <input style="flex:1;border:1px solid var(--border2);background:var(--surface);padding:5px 9px;border-radius:6px;font-size:12px;font-family:inherit;outline:none" placeholder="장소명">
-    <button class="btn-pdb-rm" onclick="this.closest('.pdb-item').remove()" style="flex-shrink:0">✕</button>
+    <button class="btn-pdb-rm" data-onclick="this.closest('.pdb-item').remove()" style="flex-shrink:0">✕</button>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%">
     <select style="padding:5px 7px;border-radius:6px;border:1px solid var(--border2);font-size:11px;font-family:inherit">
@@ -4130,8 +4130,8 @@ window.addEventListener('popstate', async e => {
             const style = document.createElement('style');
             style.innerHTML = `
         .pr-drag, .btn-replace, .btn-map-cfm, #queueToggle, #btnConfirmToggle, .btn-stay-edit { display: none !important; } 
-        [onclick*=\"openShareModal\"] { display: none !important; } /* 공유 버튼 숨김 */
-        [onclick*="goToLedgerFromMap"] { display: none !important; } /* 실제 지출 입력 / 자세히 보기 버튼 숨김 */
+        [data-onclick*=\"openShareModal\"] { display: none !important; } /* 공유 버튼 숨김 */
+        [data-onclick*="goToLedgerFromMap"] { display: none !important; } /* 실제 지출 입력 / 자세히 보기 버튼 숨김 */
         #recalcBar, .recalc-bar, [id*=\"recalc\"] { display: none !important; } /* 교체 요청 바 원천 차단 */
         #queueBox, .queue-box { display: none !important; } /* 지도가 억지로 띄우는 자동 교체 박스 원천 차단 */
         
@@ -4329,4 +4329,26 @@ function initWithdrawSection() {
         if (socialBox) socialBox.style.display = 'none';
         if (pwBox)     pwBox.style.display     = 'block';
     }
+}
+
+/* 화면 HTML 의 data-onclick 에서 부르는 작은 동작들.
+   CSP 가 인라인 스크립트를 막아 data-onclick 에는 「함수 이름(값)」 꼴만 쓸 수 있다(inline_handlers.js). */
+function _toggleCheckbox(id) {
+    const chk = document.getElementById(id);
+    if (chk) chk.checked = !chk.checked;
+}
+
+function _goToUrl(url) {
+    window.location.href = url;
+}
+
+function _removeOpenClass(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+}
+
+function _sendQuickReply(text) {
+    const inp = document.getElementById('chatInp');
+    if (inp) inp.value = text;
+    sendMsg();
 }

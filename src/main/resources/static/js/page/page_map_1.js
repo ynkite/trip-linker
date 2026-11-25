@@ -1,0 +1,2072 @@
+/* page_map.html 에서 옮김 (CSP: 인라인 스크립트를 쓰지 않음) */
+    /* 장소 이름 · 설명은 AI 답이나 순서 저장 요청에서 온 글이라 HTML 로 믿지 않는다.
+     * _mx: 글자 그대로 보이게(태그 무력화), _mjs: data-onclick='…' 안에 넣는 JS 문자열용 */
+    function _mx(v) {
+      return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function _mjs(v) {
+      return _mx(String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+    }
+    /* ============================================================
+     * [page_map.html] AI 연동 대응 변수 (const -> let으로 전환)
+     * ============================================================ */
+
+    // ── 플랜 헤더 정보 ──
+    const MAP_PLAN_INFO = {
+      title:     '제주도 3박4일 힐링 여행',
+      meta:      '2025.06.14 (토) – 2025.06.17 (화) · 2인 · 자차',
+      statusTag: '✏️ 수정 중',
+    };
+
+    // ── 지도 필터 칩 ──
+    const MAP_FILTERS = [
+      { id: 'filter-stay', cls: 'mf-stay', type: 'stay', icon: '🏨', label: '숙소' },
+      { id: 'filter-food', cls: 'mf-food', type: 'food', icon: '🍽️', label: '맛집' },
+      { id: 'filter-tour', cls: 'mf-tour', type: 'tour', icon: '📍', label: '관광지' },
+      { id: 'filter-cafe', cls: 'mf-cafe', type: 'cafe', icon: '☕', label: '카페' },
+    ];
+
+    // ── [변경] 하드코딩 배열들을 let으로 바꾸어 AI 데이터가 덮어쓸 수 있도록 수정 ──
+    let MAP_DAYS = [
+      { key: 'all', label: '전체', default: true },
+      { key: 1, label: 'Day 1' },
+      { key: 2, label: 'Day 2' },
+      { key: 3, label: 'Day 3' },
+      { key: 4, label: 'Day 4' },
+    ];
+
+    let MAP_ITINERARY = [];
+    let MAP_PINS = [];
+    let DAY_ROUTES = [];
+
+    // ── 예산 뷰 항목 (지도 내 미니 가계부) ──
+    const MAP_BUDGET_ITEMS = [
+      { label: '숙박비', sub: '기본 숙박비 + 인원 초과금', amount: '₩180,000', color: 'var(--sage)',  barPct: 78 },
+      { label: '식비',   sub: '맛집 평균 단가 × 인원수',   amount: '₩96,000',  color: 'var(--coral)', barPct: 42 },
+      { label: '교통비', sub: '이동거리 ÷ 연비 × ₩2,000', amount: '₩80,000',  color: '#22B5C4',       barPct: 35 },
+      { label: '입장료', sub: '관광지 입장료 × 인원수',    amount: '₩48,000',  color: '#F5A623',       barPct: 21 },
+    ];
+    const MAP_BUDGET_TOTAL     = '₩404,000';
+    const MAP_BUDGET_REMAINING = '₩96,000';
+
+    // ── 날씨 알림 ──
+    const MAP_WEATHER_ALERT = {
+      title: '🌧️ 06/16 오후 날씨 악화 예보',
+      body:  '태그 유사도 분석 기반 실내 대체 장소 제안',
+      cta:   'AI 대체 일정 제안 보기 →',
+      toastMsg: "AI 대체 일정: 실내 장소 우선 배치 (PLACES.is_indoor=1)",
+    };
+
+    // ── 맵 하단 액션 버튼 ──
+    const MAP_ACTION_BTNS = [
+      { id: 'mapTabMap',    tab: 'map',    icon: '🗺', label: '지도', default: true },
+      { id: 'mapTabBudget', tab: 'budget', icon: '💰', label: '예산', default: false },
+    ];
+
+    // ── 총 예산 표시 초기값 ──
+    const MAP_TOTAL_BUDGET_DISPLAY = '₩ 404,000';
+
+
+    // ── 위 메뉴 · 휴대폰 아래 메뉴 실제 높이 → --nav-h · --bnav-h 변수 갱신 (지도 높이 계산용) ──
+    // DOMContentLoaded 한 번만으론 부족 — nav 내용이 JS로 나중에 주입되므로
+    // ResizeObserver로 크기 변화를 실시간 감지해서 갱신
+    function syncNavHeight() {
+      var nav = document.querySelector('nav'), bnav = document.getElementById('bottomNav');
+      if (nav) document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+      if (bnav) document.documentElement.style.setProperty('--bnav-h', bnav.offsetHeight + 'px');
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      syncNavHeight();
+      if (!window.ResizeObserver) return;
+      var ro = new ResizeObserver(syncNavHeight);
+      ['nav', '#bottomNav'].forEach(function(sel) { var e = document.querySelector(sel); if (e) ro.observe(e); });
+    });
+    window.addEventListener('resize', syncNavHeight);
+
+    // ── 모바일 탭 전환 ──
+    function switchMobileMapTab(tab) {
+      var left = document.querySelector('.map-left');
+      var right = document.getElementById('mapRightArea');
+      var mapView = document.getElementById('mapView');
+      var budgetView = document.getElementById('budgetView');
+      var btns = ['mobTabItinerary', 'mobTabMap', 'mobTabBudget'];
+      btns.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.remove('on');
+      });
+
+      if (tab === 'itinerary') {
+        left.classList.remove('mob-hidden');
+        right.classList.add('mob-hidden');
+        document.getElementById('mobTabItinerary').classList.add('on');
+      } else if (tab === 'map') {
+        left.classList.add('mob-hidden');
+        right.classList.remove('mob-hidden');
+        if (mapView) mapView.style.display = 'block';
+        if (budgetView) budgetView.style.display = 'none';
+        document.getElementById('mobTabMap').classList.add('on');
+        // 숨겨져 있던 동안 크기가 바뀌었을 수 있으니 relayout 뒤 보이는 동선 전체로 범위를 다시 맞춘다
+        setTimeout(fitMapToVisibleRoute, 50);
+      } else if (tab === 'budget') {
+        left.classList.add('mob-hidden');
+        right.classList.remove('mob-hidden');
+        if (mapView) mapView.style.display = 'none';
+        if (budgetView) budgetView.style.display = 'block';
+        if (typeof _loadMapBudget === 'function') _loadMapBudget();
+        document.getElementById('mobTabBudget').classList.add('on');
+      }
+    }
+
+    // ── 확정/수정 상태 관리 ──────────────────────────────────
+    // window._planConfirmed: true=확정(잠금) / false=수정 중(편집 가능)
+
+    // 화면(배지·버튼·잠금)을 상태에 맞게 그려주는 함수
+    function applyPlanConfirmState(isConfirmed) {
+      window._planConfirmed = !!isConfirmed;
+
+      const badge = document.getElementById('planStatusBadge');
+      const btn   = document.getElementById('btnConfirmToggle');
+      const left  = document.querySelector('.map-left');
+
+      if (badge) {
+        badge.innerHTML = isConfirmed ? '✅ 확정됨' : '✏️ 수정 중';
+        badge.style.background = isConfirmed ? '#E8F5E9' : 'var(--sage-pale)';
+        badge.style.color      = isConfirmed ? '#2E7D32' : 'var(--sage-d)';
+      }
+      if (btn) {
+        btn.innerHTML = isConfirmed ? '✏️ 수정' : '✅ 확정';
+        btn.style.background = isConfirmed ? 'var(--coral)' : 'var(--sage)';
+      }
+      // 확정 상태면 일정 영역(드래그·교체·추가)을 잠금 처리
+      if (left) left.classList.toggle('plan-locked', isConfirmed);
+    }
+
+    // 확정 ↔ 수정 토글 버튼 핸들러
+    async function togglePlanConfirm() {
+      const tripId = window._currentTripId || sessionStorage.getItem('plannerDraftId');
+      if (!tripId) { toast('플랜 정보가 없습니다.'); return; }
+
+      // 현재 수정 중 → '확정'으로 전환 / 현재 확정 → '수정'으로 전환
+      const nextStatus = window._planConfirmed ? 'DRAFT' : 'FIXED';
+
+      try {
+        const res = await api.patch(`/api/trips/${tripId}/status`, { status: nextStatus });
+        if (!res.success) { toast(res.message || '상태 변경에 실패했습니다.'); return; }
+
+        applyPlanConfirmState(nextStatus === 'FIXED');
+
+        if (nextStatus === 'FIXED') {
+          // 확정 시 모달 노출
+          const modal = document.getElementById('confirmDoneModal');
+          if (modal) {
+            const descEl = document.getElementById('confirmDoneDesc');
+            if (descEl) {
+              const params = new URLSearchParams(window.location.search);
+              const hasShareToken = params.has('token');
+
+              // 🎯 백틱(`) 대신 작은따옴표(')를 사용하여 템플릿 깨짐을 방지합니다.
+              if (window._isInvitedEditView || hasShareToken) {
+                descEl.innerHTML = '해당 여행 플랜은 링크 보관하기 클릭시<br>초대받은 일정에서 언제든지 다시 확인할 수 있습니다.';
+              } else {
+                descEl.innerHTML = '완성된 여행 플랜은 마이페이지와 가계부에서<br>언제든지 다시 확인할 수 있습니다.';
+              }
+            }
+            modal.classList.add('open');
+          }
+        } else {
+          toast('수정 모드로 전환되었습니다.');
+        }
+      } catch (e) {
+        toast('서버 오류가 발생했습니다.');
+      }
+    }
+
+    // ── DOM 렌더링 ──
+    async function initMapPage() {
+      var routeData = null;
+
+      // 기본은 '수정 중' 상태로 시작 (DB 상세 로드 시 FIXED면 applyPlanConfirmState로 덮어씀)
+      if (typeof applyPlanConfirmState === 'function') applyPlanConfirmState(false);
+
+      const params = new URLSearchParams(location.search);
+      const shareToken = params.get('token');
+      let parsedTripId = null;
+      if (shareToken) {
+        parsedTripId = (typeof parseShareTripId === 'function') ? parseShareTripId(shareToken) : null;
+        if (!parsedTripId) console.error("유효하지 않은 토큰 포맷입니다.");
+      }
+
+      // 🎯 [순서 보정] 전역 tripId 확보를 최상단으로 끌어올려 변수 락(Lock)을 방지합니다.
+      if (!window._currentTripId) {
+        window._currentTripId = parsedTripId || sessionStorage.getItem('plannerDraftId');
+      }
+      var tripId = parsedTripId || window._currentTripId;
+
+      window._q = [];
+      if (typeof renderQ === 'function') renderQ();
+
+      var rb = document.getElementById('recalcBar');
+      if (rb) rb.style.display = 'none';
+
+
+      // 변수 선언이 완료된 후 백엔드 정보 바인딩 수행 (오류 완전 소멸)
+      if (tripId) {
+        api.get(`/api/trips/${tripId}`).then(r => {
+          const titleEl = document.querySelector('.ml-plan-ttl') || document.getElementById('mapPlanTitle');
+          const metaEl  = document.querySelector('.ml-plan-meta') || document.getElementById('mapPlanMeta');
+
+          if (!r.success || !r.data) {
+            // 🔒 [공유 링크 비회원 예외 가드]
+            // 다른 계정이거나 비회원이어서 인증이 실패해도, 세션 창고 정보를 스캔해 상단바를 강제 업데이트합니다!
+            try {
+              const draft = JSON.parse(sessionStorage.getItem('plannerDraftState') || '{}');
+
+              if (titleEl) {
+                titleEl.textContent = draft['dest-prov'] ? (draft['dest-prov'] + " 여행 플랜") : "공유받은 여행 플랜";
+              }
+
+              if (metaEl && draft['s1-date-start']) {
+                const fmt = d => d ? d.replace(/-/g, '.') : '';
+                let pax = draft['s1-pax'] || '2';
+                let trans = '자차';
+
+                if (draft['chips_chip-trans']) {
+                  const transArr = ['🚗 자차', '🚌 대중교통', '기타'];
+                  const idx = draft['chips_chip-trans'].findIndex(Boolean);
+                  if (idx !== -1) {
+                    trans = transArr[idx];
+                    if (trans === '기타' && draft['other-trans']) trans = `기타(${draft['other-trans']})`;
+                  }
+                }
+                metaEl.textContent = `${fmt(draft['s1-date-start'])} ~ ${fmt(draft['s1-date-end'])} · ${pax}인 · ${trans}`;
+              }
+            } catch(e) {
+              console.error("공유 링크 방어 코드 실행 오류:", e);
+            }
+            return;
+          }
+
+          // ── 이하 재민님의 오리지널 순정 코드 100% 보존 및 화면 주입 버그 완전 정정 ──
+          const t = r.data;
+          if (titleEl) titleEl.textContent = t.title || '여행 플랜';
+          // 🔒 플랜 상태(FIXED=확정 / 그 외=수정 중)를 버튼·배지·잠금에 반영
+          if (typeof applyPlanConfirmState === 'function') {
+            applyPlanConfirmState(t.status === 'FIXED');
+          }
+          if (metaEl) {
+            const fmt = d => d ? d.replace(/-/g,'.') : '';
+            const dow = ['일','월','화','수','목','금','토'];
+            const startDow = t.startDate ? `(${dow[new Date(t.startDate).getDay()]})` : '';
+            const endDow   = t.endDate   ? `(${dow[new Date(t.endDate).getDay()]})`   : '';
+
+            api.get(`/api/trips/${tripId}/input-form`).then(fr => {
+              let pax   = fr.data?.companionCount || t.pax || '';
+              let trans = fr.data?.transportType  || '';
+
+              // ★숙소 딥링크용 여행 기본정보 전역 저장
+              window._stayBookingInfo = {
+                dest:  t.destination || '',
+                start: t.startDate || '',
+                end:   t.endDate || '',
+                pax:   parseInt(pax) || 2
+              };
+
+              try {
+                const draft = JSON.parse(sessionStorage.getItem('plannerDraftState') || '{}');
+                if (!pax || pax === '2' || pax === 2) {
+                  if (draft['s1-pax']) pax = draft['s1-pax'];
+                }
+                if (!trans || trans.includes('자차')) {
+                  if (draft['chips_chip-trans']) {
+                    const transArr = ['🚗 자차', '🚌 대중교통', '기타'];
+                    const idx = draft['chips_chip-trans'].findIndex(Boolean);
+                    if (idx !== -1) {
+                      trans = transArr[idx];
+                      if (trans === '기타' && draft['other-trans']) {
+                        trans = `기타(${draft['other-trans']})`;
+                      }
+                    }
+                  }
+                }
+              } catch(e) {
+                console.error("세션 데이터 읽기 오류:", e);
+              }
+
+              // 🎯 [정정 핵심]: 조립 완료된 정식 텍스트를 화면 엘리먼트에 정상 주입합니다!
+              metaEl.textContent = `${fmt(t.startDate)} ${startDow} – ${fmt(t.endDate)} ${endDow} · ${pax}인 · ${trans}`;
+            });
+          }
+        });
+      }
+
+      const listEl = document.getElementById('mapDayList');
+      if (!listEl) {
+        // 아직 돔 렌더링이 안 끝났다면 50ms 후에 재시도하도록 예약하고 함수 종료
+        setTimeout(initMapPage, 50);
+        return;
+      }
+
+      // 1. DB에서 저장된 JSON 데이터 파싱해서 가져오기
+      if (tripId) {
+        const res = await api.get(`/api/trips/${tripId}/routes?t=${Date.now()}`);
+        if (res.success && res.data) {
+          try {
+            routeData = (typeof res.data === 'string') ? JSON.parse(res.data) : res.data;
+            // 🔑 여행 기록에서 불러온 경로를 세션에 저장 → 1·2·3 으로 갔다가 4번(경로 생성)으로
+            //    되돌아갈 수 있게 함. 아무것도 안 바꿨으면 dirty 가 아니므로 4번은 정상 접근 가능.
+            if (routeData) {
+              sessionStorage.setItem('ai_generated_route',
+                      (typeof res.data === 'string') ? res.data : JSON.stringify(routeData));
+              window._planDirty = false;
+              if (typeof _syncStep4State === 'function') _syncStep4State();
+            }
+          } catch(e) {
+            console.error("DB 데이터 파싱 에러:", e);
+          }
+        }
+      }
+
+      // 2. DB에 없으면 브라우저 임시 저장소(sessionStorage)에서 로드
+      if (!routeData) {
+        const aiRouteStr = sessionStorage.getItem('ai_generated_route');
+        if (aiRouteStr) {
+          try {
+            routeData = JSON.parse(aiRouteStr);
+          } catch(e) {
+            console.error("세션 데이터 파싱 에러:", e);
+          }
+        }
+      }
+
+      // 필터 칩 UI 작동
+      document.querySelector('.map-filters').innerHTML = MAP_FILTERS.map(f =>
+              `<button class="mf-chip ${f.cls} on" id="${f.id}"
+    data-onclick="toggleMarker(this,'${f.type}')">${f.icon} ${f.label}</button>`).join('');
+
+
+      // 3. AI 데이터가 성공적으로 로드되었을 때 처리
+      if (routeData && routeData.length > 0) {
+        MAP_ITINERARY = routeData; // 전역 스코프에 데이터 주입
+
+        // ✨ [기능 추가]: AI가 만든 코스 기간에 맞춰 Day 탭 일수 동적 매핑 생성
+        MAP_DAYS = [{ key: 'all', label: '전체', default: true }];
+        routeData.forEach(d => {
+          MAP_DAYS.push({ key: d.day, label: `Day ${d.day}` });
+        });
+        document.querySelector('.day-tabs').innerHTML = MAP_DAYS.map(d =>
+                `<button class="day-tab${d.default?' on':''}" id="dtab-${d.key}" data-onclick="showDay('${d.key}',this)">${d.label}</button>`
+        ).join('');
+
+        const catSums = { stay: 0, food: 0, transit: 0, tour: 0 };
+        let realTotalBudget = 0;
+
+        routeData.forEach(day => {
+          let dailySum = 0;
+          if (day.places) {
+            day.places.forEach(p => {
+              // 1. 일반 장소 금액 계산 (x, X, ×, * 대소문자 특수문자 모두 허용)
+              if (p.sub) {
+                const amountMatch = p.sub.match(/₩\s*([\d,]+)(?:\s*[xX×*]\s*(\d+))?/);
+                if (amountMatch) {
+                  const unit = parseInt(amountMatch[1].replace(/,/g, '')) || 0;
+                  const qty  = parseInt(amountMatch[2] || '1');
+                  const total = unit * qty;
+                  if (p.type === 'stay') catSums.stay += total;
+                  else if (p.type === 'food' || p.type === 'cafe') catSums.food += total;
+                  else catSums.tour += total;
+                  dailySum += total;
+                }
+              }
+              // 2. 이동 수단(transit) 금액 계산
+              if (p.transit) {
+                const m = p.transit.match(/₩\s*([\d,]+)/);
+                if (m) {
+                  const cost = parseInt(m[1].replace(/,/g,'')) || 0;
+                  catSums.transit += cost;
+                  dailySum += cost;
+                }
+              }
+            });
+          }
+          // ✨ 핵심: AI가 제멋대로 쓴 일차별 예산(day.budget)을 삭제하고 진짜 계산값으로 강제 덮어씌움!
+          day.budget = `₩${dailySum.toLocaleString()}`;
+          realTotalBudget += dailySum;
+        });
+
+        const finalBudgetStr = '₩' + realTotalBudget.toLocaleString();
+        if(document.getElementById('totalBudget')) document.getElementById('totalBudget').textContent = finalBudgetStr;
+        if(document.getElementById('map-budget-total')) document.getElementById('map-budget-total').textContent = finalBudgetStr;
+
+        const catTotal = realTotalBudget || 1;
+        const pct = v => Math.round((v / catTotal) * 100);
+
+        const budgetItemsEl = document.getElementById('map-budget-items');
+        if (budgetItemsEl) {
+          const cats = [
+            { label:'숙박비', val: catSums.stay,    color:'var(--sage)'  },
+            { label:'식비',   val: catSums.food,    color:'var(--coral)' },
+            { label:'교통비', val: catSums.transit, color:'#22B5C4'      },
+            { label:'입장료', val: catSums.tour,    color:'#F5A623'      },
+          ];
+          budgetItemsEl.innerHTML = cats.map(c => `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span style="font-weight:700">${c.label}</span>
+            <span style="font-weight:700;color:${c.color}">₩${c.val.toLocaleString()}</span>
+          </div>
+          <div style="background:var(--border2);border-radius:4px;height:6px">
+            <div style="width:${pct(c.val)}%;background:${c.color};height:6px;border-radius:4px;transition:width .4s"></div>
+          </div>
+        </div>`).join('');
+        }
+
+        // ✨ 파이차트 원(색상 비율) & 범례 완벽 동기화
+        const pieRing = document.querySelector('.pie-ring');
+        const pieLegend = document.querySelector('.pie-legend');
+        let pStay = pct(catSums.stay);
+        let pFood = pct(catSums.food);
+        let pTrans = pct(catSums.transit);
+        let pTour = pct(catSums.tour);
+
+        if (pieRing) {
+          pieRing.style.background = `conic-gradient(var(--sage) 0% ${pStay}%, var(--coral) ${pStay}% ${pStay+pFood}%, #22B5C4 ${pStay+pFood}% ${pStay+pFood+pTrans}%, #F5A623 ${pStay+pFood+pTrans}% 100%)`;
+          pieRing.style.borderRadius = '50%';
+        }
+        if (pieLegend) {
+          pieLegend.innerHTML = `
+            <div class="pie-leg-item"><div class="pie-dot" style="background:var(--sage)"></div>숙박 ${pStay}%</div>
+            <div class="pie-leg-item"><div class="pie-dot" style="background:var(--coral)"></div>식비 ${pFood}%</div>
+            <div class="pie-leg-item"><div class="pie-dot" style="background:#22B5C4"></div>교통 ${pTrans}%</div>
+            <div class="pie-leg-item"><div class="pie-dot" style="background:#F5A623"></div>입장료 ${pTour}%</div>
+          `;
+        }
+
+        const remainEl = document.getElementById('map-budget-remaining');
+        const inputBudget = parseInt(sessionStorage.getItem('plannerDraftState')
+                ? JSON.parse(sessionStorage.getItem('plannerDraftState') || '{}')['s1-budget']?.replace(/,/g,'') || '0'
+                : '0');
+        if (remainEl && inputBudget > 0) {
+          const remain = inputBudget - realTotalBudget;
+          remainEl.textContent = remain >= 0
+                  ? `예산 범위 내 ✓ 잔여 ₩${remain.toLocaleString()}`
+                  : `⚠️ 예산 ₩${Math.abs(remain).toLocaleString()} 초과`;
+          remainEl.style.background  = remain >= 0 ? 'var(--sage-pale)' : '#FEF3F2';
+          remainEl.style.borderColor = remain >= 0 ? 'var(--sage-l)'    : '#FECACA';
+          remainEl.style.color       = remain >= 0 ? 'var(--sage-d)'    : 'var(--coral)';
+        }
+
+        // 원본 마크업 구조 100% 동일하게 동적 주입 (불필요한 팝업 제거)
+        listEl.innerHTML = routeData.map(day => `
+      <div class="day-section" data-day="${day.day}">
+        <div class="ds-hd">
+          <span class="ds-label">${_mx(day.label || `📅 Day ${day.day}`)}</span>
+          <div class="ds-budget"><span>${_mx(day.budget || '')}</span></div>
+        </div>
+        ${day.places ? day.places.map(p => p.transit ? `<div class="transit-map-row">${_mx(p.transit)}</div>` : `
+          <div class="place-row" data-key="${_mx(p.key)}">
+            <div class="pr-drag">⋮⋮</div>
+            <div class="pr-icon pr-${_mx(p.type)}">${p.icon ? _mx(p.icon) : (p.type === 'stay' ? '🏨' : (p.type === 'food' ? '🍽️' : (p.type === 'cafe' ? '☕' : '📍')))}</div>
+            <div class="pr-info" style="cursor:pointer" data-onclick="showMapPlacePopup('${_mjs(p.name || p.key)}','${_mjs(p.type)}')">
+              <div class="pr-name" style="font-weight:700; color:#333;">${_mx(p.name)}</div>
+              <div class="pr-sub" style="font-size:12px; color:var(--text3); margin-top:2px;">${_mx(p.sub || '')}</div>
+              ${(p.stars && !/정보\s*없음/.test(p.stars)) ? `<div class="pr-stars" style="color:#B26B00; font-size:11px; margin-top:4px; font-weight:600;">${_mx(p.stars)}</div>` : ''}
+            </div>
+            <div style="font-size:10px;font-weight:600;color:var(--text2);margin-right:5px;white-space:nowrap">${_mx(p.time || '')}</div>
+            <button class="btn-replace" data-onclick="showReplaceInput(this,'${_mjs(p.key)}')">교체</button>
+          </div>
+          ${p.type === 'stay' ? `
+          <div class="stay-action-row">
+            ${p.actualPrice
+                ? `<button class="btn-stay-book" data-onclick="openSiteModal('${_mjs(p.key)}')">예약하기</button>
+                 <button class="btn-stay-edit" data-onclick="openPriceModal('${_mjs(p.key)}')">금액 수정</button>`
+                : `<button class="btn-stay-check" data-onclick="openSiteModal('${_mjs(p.key)}')">금액확인 / 예약하기</button>`}
+          </div>
+          ` : ''}
+          <div class="replace-area" id="ri-${_mx(p.key)}" style="display:none;">
+            <div class="replace-label">AI에게 교체 요구사항 입력</div>
+            <div class="replace-row">
+              <input class="replace-inp" id="rt-${_mx(p.key)}" type="text" placeholder="${_mx(p.replacePh || '교체 요구사항 입력')}">
+              <button class="btn-queue-add" data-onclick="addQueue('${_mjs(p.key)}')">등록</button>
+            </div>
+          </div>
+        `).join('') : ''}
+      </div>
+    `).join('');
+
+        MAP_PINS = [];
+        DAY_ROUTES = [];
+        const colors = ['#2D9E8A', '#A78BFA', '#22B5C4', '#F5A623', '#F472B6'];
+
+        routeData.forEach(d => {
+          let currentDayKeys = [];
+          let currentDayPaths = [];   // ★구간별 도로 경로 좌표(transit.pathCoords) 모음
+          if(d.places) {
+            d.places.forEach(p => {
+              if(p.transit) {
+                // transit 객체에 백엔드가 박은 도로 경로 좌표가 있으면 수집
+                if (Array.isArray(p.pathCoords) && p.pathCoords.length >= 2) {
+                  currentDayPaths.push(p.pathCoords);
+                } else {
+                  currentDayPaths.push(null); // 경로 없으면 직선 폴백 표시
+                }
+                return;
+              }
+              if(!p.transit && p.name) {
+                MAP_PINS.push({
+                  key: p.key,
+                  type: p.type,
+                  icon: p.icon || (p.type === 'stay' ? '🏨' : (p.type === 'food' ? '🍽️' : (p.type === 'cafe' ? '☕' : '📍'))),
+                  label: p.name,
+                  day: d.day,
+                  // ★백엔드(recalcTransitWithKakao)가 이미 카카오 좌표를 박아줬으면 그대로 사용한다.
+                  //   (없을 때만 지도 init 단계에서 keywordSearch로 보조 검색)
+                  lat: (typeof p.lat === 'number') ? p.lat : null,
+                  lng: (typeof p.lng === 'number') ? p.lng : null,
+                  isFound: (p.isFound === true && typeof p.lat === 'number' && typeof p.lng === 'number'),
+                  category: null,
+                  placeUrl: null
+                });
+                currentDayKeys.push(p.key);
+              }
+            });
+          }
+          DAY_ROUTES.push({ day: d.day, color: colors[(d.day - 1) % colors.length], keys: currentDayKeys, segPaths: currentDayPaths });
+        });
+
+        if (typeof initDragAndDrop === 'function') initDragAndDrop();
+        if (typeof initKakaoMap === 'function') initKakaoMap();
+
+        try {
+          const fallbackQ = sessionStorage.getItem('map_fallback_queue');
+          if (fallbackQ) {
+            window._q = JSON.parse(fallbackQ);
+            sessionStorage.removeItem('map_fallback_queue'); // 사용 후 즉시 파괴
+
+            // 왼쪽 큐 레이어 UI 강제 활성화 및 렌더링
+            setTimeout(function() {
+              if (typeof renderQ === 'function') {
+                renderQ();
+                toast('⚠️ AI가 자동 정정에 실패한 장소들이 교체 목록에 추가되었습니다.', 4000);
+                const qBox = document.getElementById('queueBox');
+                const qToggle = document.getElementById('queueToggle');
+                if (qBox) { qBox.classList.add('has'); qBox.style.display = 'block'; }
+                if (qToggle) qToggle.style.display = 'none';
+              }
+            }, 800);
+          }
+        } catch(e) {
+          console.error("폴백 큐 파싱 실패:", e);
+        }
+
+      } else {
+        document.querySelector('.day-tabs').innerHTML = MAP_DAYS.map(d => `<button class="day-tab${d.default?' on':''}" id="dtab-${d.key}" data-onclick="showDay('${d.key}',this)">${d.label}</button>`).join('');
+        listEl.innerHTML = '<div style="padding:20px;color:var(--text3);">생성된 일정이 없습니다. 챗봇 화면에서 일정을 생성해주세요.</div>';
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMapPage);
+    } else {
+      initMapPage();
+    }
+
+    // ── ✨ [기능 추가]: Day 1, 2, 3, 4 클릭 시 왼쪽 리스트 섹션 및 지도 레이어 필터링 구현 ──
+    function showDay(day, btn) {
+      if(btn) {
+        document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('on'));
+        btn.classList.add('on');
+      }
+
+      // 왼쪽 일정 목록 일차별 가시성 필터링
+      document.querySelectorAll('.day-section').forEach(section => {
+        const targetDay = section.getAttribute('data-day');
+        if (day === 'all' || targetDay == day) {
+          section.style.display = 'block';
+        } else {
+          section.style.display = 'none';
+        }
+      });
+
+      // 카카오맵 커스텀 오버레이 동적 필터
+      if (window._kakaoOverlays) {
+        window._kakaoOverlays.forEach(item => {
+          if (day === 'all' || item.day == day) {
+            item.overlay.setMap(window._kakaoMap);
+          } else {
+            item.overlay.setMap(null);
+          }
+        });
+      }
+
+      // 카카오맵 동선 폴리라인 동적 필터
+      if (window._kakaoPolylines) {
+        window._kakaoPolylines.forEach(item => {
+          if (day === 'all' || item.day == day) {
+            item.line.setMap(window._kakaoMap);
+          } else {
+            item.line.setMap(null);
+          }
+        });
+      }
+
+      updateBoundsForDay(day);
+    }
+
+    // ── 카카오맵 초기화 ──
+    function initKakaoMap() {
+      if (window._isKakaoMapInitRunning) return;
+      window._isKakaoMapInitRunning = true;
+      if (typeof kakao === 'undefined' || typeof kakao.maps === 'undefined') {
+        window._isKakaoMapInitRunning = false;
+        setTimeout(initKakaoMap, 200);
+        return;
+      }
+
+      kakao.maps.load(function() {
+        var container = document.getElementById('kakaoMap');
+        if (!container || container.clientWidth === 0 || container.clientHeight === 0) {
+          window._isKakaoMapInitRunning = false;
+          setTimeout(initKakaoMap, 150);
+          return;
+        }
+
+        // 지도가 겹쳐서 깨지는 현상 방지 껍데기 청소
+        container.innerHTML = '';
+
+        // 기본 지도 기동 — 여행지(MAP_PINS)가 있으면 첫 핀 좌표, 없으면 한반도 중심으로 초기화
+        // (이전: 제주도 하드코딩 → 합안군 여행인데 제주도가 뜨던 버그 수정)
+        var _initLat = 36.5, _initLng = 127.8, _initLevel = 8; // 한반도 중심(기본)
+        if (MAP_PINS && MAP_PINS.length > 0 && typeof kakao !== 'undefined') {
+          // ★백엔드 좌표가 있는 첫 핀으로 초기 중심을 즉시 잡는다(검색 응답 전 한반도 중심이 잠깐 보이던 깜빡임 방지)
+          var _firstFixed = MAP_PINS.find(function(p) {
+            return p.isFound && typeof p.lat === 'number' && typeof p.lng === 'number';
+          });
+          if (_firstFixed) {
+            _initLat = _firstFixed.lat;
+            _initLng = _firstFixed.lng;
+          }
+          // 여행지 이름으로 대략 중심을 잡기 위해 첫 장소명을 미리 검색
+          var _destKeyword = '';
+          try {
+            var _si = sessionStorage.getItem('plannerDraftState');
+            if (_si) {
+              var _sd = JSON.parse(_si);
+              _destKeyword = (_sd['s1-dest-city'] || _sd['s1-dest-prov'] || '').replace(/시\/군\/구 선택/g,'').trim();
+            }
+          } catch(e) {}
+          // 백엔드 좌표가 없을 때만 키워드 검색으로 중심 보정(좌표가 이미 있으면 setBounds가 더 정확하므로 생략)
+          if (_destKeyword && !_firstFixed) {
+            var _ps0 = new kakao.maps.services.Places();
+            _ps0.keywordSearch(_destKeyword, function(data, status) {
+              if (status === kakao.maps.services.Status.OK && data && data.length) {
+                window._kakaoMap.setCenter(new kakao.maps.LatLng(parseFloat(data[0].y), parseFloat(data[0].x)));
+                window._kakaoMap.setLevel(8);
+              }
+            });
+          }
+        }
+        window._kakaoMap = new kakao.maps.Map(container, {
+          center: new kakao.maps.LatLng(_initLat, _initLng),
+          level: _initLevel
+        });
+
+        // 보험용 리레이아웃
+        setTimeout(function() {
+          if (window._kakaoMap) window._kakaoMap.relayout();
+        }, 300);
+
+        window._kakaoMap.addControl(
+                new kakao.maps.ZoomControl(),
+                kakao.maps.ControlPosition.RIGHT
+        );
+        // 움직이거나 확대/축소가 끝날 때마다 이름표 자리를 다시 잡는다(지도마다 한 번 등록)
+        kakao.maps.event.addListener(window._kakaoMap, 'idle', layoutMapLabels);
+
+        // 청소가 끝났으니 배열을 새롭게 초기화합니다.
+        window._kakaoOverlays = [];
+        window._kakaoPolylines = [];
+
+        var ps = new kakao.maps.services.Places();
+        var bounds = new kakao.maps.LatLngBounds();
+        var searchCount = 0;
+        var totalPlaces = MAP_PINS.length;
+
+        if (totalPlaces === 0) {
+          window._isKakaoMapInitRunning = false;
+          // 🩹 [빈 지도 보정] 마커가 0개여도 회색 빈 화면이 되지 않도록 한반도 중심으로 타일을 깔아준다
+          setTimeout(function() {
+            if (window._kakaoMap) {
+              window._kakaoMap.relayout();
+              window._kakaoMap.setCenter(new kakao.maps.LatLng(_initLat, _initLng));
+              window._kakaoMap.setLevel(_initLevel);
+            }
+          }, 150);
+          return;
+        }
+
+        // 🎯 [지역 반경 검증] 동명(同名) 타지역 장소 오탐 차단.
+        //   여행지 중심 좌표를 먼저 구하고, 각 장소는 그 반경 안 후보만 채택한다.
+        function _haversineKm(lat1, lng1, lat2, lng2) {
+          var R = 6371;
+          var dLat = (lat2 - lat1) * (Math.PI / 180);
+          var dLng = (lng2 - lng1) * (Math.PI / 180);
+          var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * (Math.PI/180)) * Math.cos(lat2 * (Math.PI/180)) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+          return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        // 검색 성공(반경 내) 시 마커 렌더링 — 기존 로직 그대로
+        function _onResolved(pin, place) {
+          var realLat = parseFloat(place.y);
+          var realLng = parseFloat(place.x);
+          pin.lat = realLat;
+          pin.lng = realLng;
+          pin.placeUrl = place.place_url;
+          pin.category = place.category_name ? place.category_name.split(' > ').pop() : null;
+
+          // 마커(원 + 이름표). 색은 종류 클래스(t-stay 등) → CSS 변수 --pin-*, 이름표 자리는 layoutMapLabels 가 정한다
+          var el = document.createElement('div');
+          el.className = 'tl-pin t-' + pin.type;
+          var dot = document.createElement('div');
+          dot.className = 'tl-pin-dot';
+          dot.textContent = pin.icon;
+          var labelEl = document.createElement('div');
+          labelEl.className = 'tl-pin-label';
+          labelEl.textContent = pin.label;
+          labelEl.title = pin.label;
+          el.appendChild(dot);
+          el.appendChild(labelEl);
+
+          var overlay = new kakao.maps.CustomOverlay({
+            position: new kakao.maps.LatLng(realLat, realLng), content: el, xAnchor: 0, yAnchor: 0
+          });
+          overlay.setMap(window._kakaoMap);
+          var storedPin = MAP_PINS.find(function(p) { return p.key === pin.key; });
+          var item = { key: pin.key, overlay: overlay, type: storedPin ? storedPin.type : pin.type, day: pin.day,
+                       el: el, labelEl: labelEl, order: MAP_PINS.indexOf(storedPin || pin) };
+          el.addEventListener('click', function() { _pinMapLabel(item); focusPlaceRow(pin.key); });
+          window._kakaoOverlays.push(item);
+          bounds.extend(new kakao.maps.LatLng(realLat, realLng));
+          window._kakaoBounds = bounds; // 🩹 선 깜빡임 보정용 — relayout 후 재적용에 사용
+          pin.isFound = true;
+        }
+
+        // 미발견(또는 반경 밖) 시 교체 큐로 — 기존 로직 그대로
+        function _onNotFound(pin) {
+          console.error("❌ [지도 배제] 미존재/타지역 장소: " + pin.label);
+          pin.isFound = false;
+          var isAlreadyInQueue = window._q.some(function(item) { return item.place === pin.label; });
+          if (!isAlreadyInQueue) {
+            _q.push({
+              place: pin.label,
+              req: "지도에 없는 장소입니다. 실존하는 다른 곳으로 교체해 주세요."
+            });
+          }
+        }
+
+        // 모든 검색이 끝난 뒤 한 번만 실행 — 기존 finalize 로직 그대로
+        function _finalizeMap() {
+          searchCount++;
+          if (searchCount !== totalPlaces) return;
+
+          window._isKakaoMapInitRunning = false;
+          sessionStorage.removeItem('autoHealingRetries');
+
+          if (typeof renderQ === 'function') renderQ();
+
+          if (window._q.length > 0) {
+            var qBox = document.getElementById('queueBox');
+            var qToggle = document.getElementById('queueToggle');
+            if (qBox) { qBox.classList.add('has'); qBox.style.display = 'block'; }
+            if (qToggle) qToggle.style.display = 'none';
+          }
+
+
+          if (window._kakaoOverlays && window._kakaoOverlays.length > 0) {
+            window._kakaoMap.setBounds(bounds);
+          }
+
+          setTimeout(function() {
+            drawLivePolylines();
+            checkActualWeatherAlert(window._currentTripId);
+          }, 100);
+
+// 🩹 [첫 생성 진입 보정] SPA 전환 직후엔 지도 컨테이너 크기가 늦게 확보돼
+          //   bounds·폴리라인이 0px 기준으로 계산되어 안 보이는 사고가 있었다.
+          //   relayout 후 한 박자 늦춰 setBounds·폴리라인을 적용하면 첫 진입에도 정상 동작한다.
+          var _applyBoundsAndLines = function() {
+            if (window._kakaoMap) {
+              window._kakaoMap.relayout();
+              if (window._kakaoOverlays && window._kakaoOverlays.length > 0) {
+                window._kakaoMap.setBounds(bounds);
+              }
+
+              setTimeout(() => {
+                drawLivePolylines();
+                if (typeof renderQ === 'function') renderQ(); // 묻혀있던 검색 에러 큐 갱신
+                checkActualWeatherAlert(window._currentTripId);
+                layoutMapLabels();
+              }, 200);
+            }
+          };
+          setTimeout(_applyBoundsAndLines, 150);
+        }
+
+        // 장소별 검색: '여행지명 + 장소명'으로 좁히고, 반경 안 후보만 채택
+        function _startPinSearch(destRegion, regionCenter, maxRadiusKm) {
+          MAP_PINS.forEach(function(pin) {
+            // ★백엔드가 이미 좌표를 박아준 핀은 재검색하지 않고 그 좌표로 즉시 렌더한다.
+            //   (프론트 재검색이 백엔드와 다른 좌표를 잡아 시점이 튀던 문제 + 비동기 타이밍 문제 차단)
+            if (pin.isFound && typeof pin.lat === 'number' && typeof pin.lng === 'number') {
+              _onResolved(pin, { y: pin.lat, x: pin.lng, place_url: pin.placeUrl, category_name: '' });
+              _finalizeMap();
+              return;
+            }
+
+            var query = destRegion ? (destRegion + ' ' + pin.label) : pin.label;
+
+            function _pickInRegion(list) {
+              if (!list || list.length === 0) return null;
+              if (!regionCenter) return list[0];
+              for (var i = 0; i < list.length; i++) {
+                var la = parseFloat(list[i].y), ln = parseFloat(list[i].x);
+                if (_haversineKm(regionCenter.lat, regionCenter.lng, la, ln) <= maxRadiusKm) return list[i];
+              }
+              return null;
+            }
+
+            ps.keywordSearch(query, function(data, status) {
+              var hit = (status === kakao.maps.services.Status.OK) ? _pickInRegion(data) : null;
+              if (hit) {
+                _onResolved(pin, hit);
+                _finalizeMap();
+              } else {
+                // 지역 포함 검색이 실패/반경 밖이면 장소명만으로 한 번 더(여전히 반경 검사)
+                ps.keywordSearch(pin.label, function(fb, fbStatus) {
+                  var h2 = (fbStatus === kakao.maps.services.Status.OK) ? _pickInRegion(fb) : null;
+                  if (h2) _onResolved(pin, h2); else _onNotFound(pin);
+                  _finalizeMap();
+                });
+              }
+            });
+          });
+        }
+
+        // 여행지 중심 좌표 확보 후 검색 루프 기동
+        function _runWithRegion(destRegion) {
+          var hasCity = !!(destRegion && destRegion.trim().split(/\s+/).length >= 2);
+          // 🩹 [반경 완화] 인접 시·군(예: 속초↔양양↔고성) 장소가 경계에서 배제되지 않도록 여유를 둔다
+          var maxRadiusKm = (destRegion && destRegion.indexOf('제주') >= 0) ? 60 : (hasCity ? 60 : 90);
+          var geocoder = (kakao.maps.services && kakao.maps.services.Geocoder)
+                  ? new kakao.maps.services.Geocoder() : null;
+
+          if (geocoder && destRegion) {
+            geocoder.addressSearch(destRegion, function(result, status) {
+              if (status === kakao.maps.services.Status.OK && result[0]) {
+                _startPinSearch(destRegion, { lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) }, maxRadiusKm);
+              } else {
+                ps.keywordSearch(destRegion, function(d2, s2) {
+                  var rc = (s2 === kakao.maps.services.Status.OK && d2[0])
+                          ? { lat: parseFloat(d2[0].y), lng: parseFloat(d2[0].x) } : null;
+                  _startPinSearch(destRegion, rc, maxRadiusKm);
+                });
+              }
+            });
+          } else if (destRegion) {
+            ps.keywordSearch(destRegion, function(d2, s2) {
+              var rc = (s2 === kakao.maps.services.Status.OK && d2[0])
+                      ? { lat: parseFloat(d2[0].y), lng: parseFloat(d2[0].x) } : null;
+              _startPinSearch(destRegion, rc, maxRadiusKm);
+            });
+          } else {
+            _startPinSearch('', null, maxRadiusKm);
+          }
+        }
+
+        // 여행지(목적지) 문자열 확보: 캐시 우선, 없으면 trip API에서 1회 조회
+        if (window._mapDestRegion) {
+          _runWithRegion(window._mapDestRegion);
+        } else if (window._currentTripId) {
+          api.get('/api/trips/' + window._currentTripId).then(function(r) {
+            var dr = (r && r.success && r.data && r.data.destination) ? r.data.destination : '';
+            window._mapDestRegion = dr;
+            _runWithRegion(dr);
+          }).catch(function() { _runWithRegion(''); });
+        } else {
+          _runWithRegion('');
+        }
+      });
+    }
+    async function checkActualWeatherAlert(tripId) {
+      const alertBanner = document.querySelector('.weather-alert');
+      if (!alertBanner) return;
+
+      // 🎯 기본값은 숨김 처리
+      alertBanner.style.display = 'none';
+
+      try {
+        // 1. 현재 플랜의 행정구역(목적지) 정보 가져오기
+        const tripRes = await api.get('/api/trips/' + tripId);
+        if (!tripRes.success || !tripRes.data) return;
+
+        const locStr = tripRes.data.destination ? tripRes.data.destination.split(' ')[0] : '서울';
+
+        // 2. 백엔드 날씨 데이터 조회
+        const weatherRes = await fetch('/api/maps/weather?region=' + encodeURIComponent(locStr));
+        const json = await weatherRes.json();
+
+        if (!json.success || !json.data || json.data.length === 0) return;
+
+        // 3. 여행 기간(최대 7일) 중 하루라도 악천후 조건이 충족되는지 검사
+        let hasBadWeather = false;
+
+        for (let i = 0; i < json.data.length; i++) {
+          if (i >= 7) break; // 최대 7일까지만 가드
+          const dto = json.data[i];
+
+          // 강수 형태가 있거나(pty > 0), 강수 확률이 40% 이상이거나, 구름이 많고 흐린 날(sky >= 3)
+          if (dto.pty > 0 || dto.pop >= 40 || dto.sky >= 3) {
+            hasBadWeather = true;
+            break; // 하루라도 기상 악화가 있으면 즉시 탈출하여 배너를 켭니다.
+          }
+        }
+
+        // 4. 악천후 감지 시 2번 사진 양식의 순수 텍스트 구조로 주입 후 활성화
+        if (hasBadWeather) {
+          const titleEl = alertBanner.querySelector('.wa-ttl');
+          const bodyEl = alertBanner.querySelector('.wa-body');
+
+          // 🎯 2번 사진 구조와 토시 하나 안 틀리고 정확하게 매핑
+          if (titleEl) titleEl.textContent = '🌧️ 날씨 악화 예보 감지';
+          if (bodyEl) bodyEl.textContent = '태그 유사도 분석 기반 실내 대체 장소 제안';
+
+          alertBanner.style.display = 'block'; // 배너 온(ON)
+          layoutMapLabels(); // 알림 상자에 깔린 이름표를 비킨다
+        }
+      } catch (err) {
+        console.warn('[WeatherAlert] 실시간 날씨 데이터 바인딩 실패:', err);
+      }
+    }
+
+    // ── 💡 동적 좌표 기반 폴리라인 빌더 서브루틴 추가 ──
+    function drawLivePolylines() {
+      // ★중복 그리기 방지: 기존 폴리라인·화살표를 먼저 모두 제거한다.
+      //   (이게 없으면 직선→도로경로 등 여러 번 호출 시 선이 겹쳐 이상한 선이 남는다)
+      if (window._kakaoPolylines) {
+        window._kakaoPolylines.forEach(function(item) { if (item.line) item.line.setMap(null); });
+      }
+      window._kakaoPolylines = [];
+      if (window._kakaoArrows) {
+        window._kakaoArrows.forEach(function(a) { a.setMap(null); });
+        window._kakaoArrows = [];
+      }
+
+      var pinByKey = {};
+      MAP_PINS.forEach(function(p) { if(p.lat && p.lng) pinByKey[p.key] = p; });
+
+      DAY_ROUTES.forEach(function(route) {
+        var keys = route.keys;
+        var hasRoad = Array.isArray(route.segPaths) && route.segPaths.some(function(s){ return Array.isArray(s) && s.length >= 2; });
+
+        // 구간(장소 i → 장소 i+1) 단위로 좌표 배열을 만든다.
+        //   도로 경로(segPaths[i])가 있으면 그걸, 없으면 두 마커 직선을 쓴다.
+        var segments = [];
+        for (var i = 0; i < keys.length - 1; i++) {
+          var a = pinByKey[keys[i]], b = pinByKey[keys[i + 1]];
+          if (!a || !b || !a.isFound || !b.isFound) continue;
+          var segCoords = [];
+          var seg = hasRoad ? route.segPaths[i] : null;
+          if (Array.isArray(seg) && seg.length >= 2) {
+            segCoords.push([a.lat, a.lng]);
+            seg.forEach(function(c){ segCoords.push([c[0], c[1]]); });
+            segCoords.push([b.lat, b.lng]);
+          } else {
+            segCoords.push([a.lat, a.lng], [b.lat, b.lng]);
+          }
+          segments.push(segCoords);
+        }
+        if (segments.length === 0) return;
+
+        // ★왕복(겹침) 구간 분리: 진행 방향의 수직으로 살짝 평행 이동(offset).
+        //   같은 도로를 갔다가 오면 가는 길/오는 길이 나란히 보여 화살표가 안 엉킨다.
+        //   offset 양은 위경도 기준 약 8m. (지도 줌과 무관한 고정 물리거리)
+        var OFFSET_DEG = 0.00007; // 약 8m
+        function offsetSeg(coords) {
+          if (coords.length < 2) return coords.map(function(c){ return new kakao.maps.LatLng(c[0], c[1]); });
+          // 구간 전체의 평균 진행방향 벡터
+          var dLat = coords[coords.length-1][0] - coords[0][0];
+          var dLng = coords[coords.length-1][1] - coords[0][1];
+          var len = Math.sqrt(dLat*dLat + dLng*dLng) || 1;
+          // 진행방향의 오른쪽 법선(수직) 단위벡터 → 항상 진행방향 오른쪽으로 민다.
+          //   왕복이면 가는 길과 오는 길은 진행방향이 반대라 서로 반대쪽으로 밀려 분리됨.
+          var nLat = (dLng / len) * OFFSET_DEG;
+          var nLng = (-dLat / len) * OFFSET_DEG;
+          return coords.map(function(c){ return new kakao.maps.LatLng(c[0] + nLat, c[1] + nLng); });
+        }
+
+        segments.forEach(function(segCoords) {
+          var p = offsetSeg(segCoords);
+          if (p.length < 2) return;
+
+          var bg = new kakao.maps.Polyline({
+            path: p, strokeWeight: 10, strokeColor: '#000000', strokeOpacity: 0.6, strokeStyle: 'solid'
+          });
+          bg.setMap(window._kakaoMap);
+          window._kakaoPolylines.push({ day: route.day, line: bg, path: null });
+
+          var main = new kakao.maps.Polyline({
+            path: p, strokeWeight: 6, strokeColor: route.color, strokeOpacity: 1.0, strokeStyle: 'solid'
+          });
+          main.setMap(window._kakaoMap);
+          // 화살표는 실제 그려진(offset된) 경로 위에 찍어 방향을 표시한다.
+          window._kakaoPolylines.push({ day: route.day, line: main, path: p });
+        });
+      });
+
+      setTimeout(renderArrows, 100);
+
+      if (!window._arrowEventRegistered && window._kakaoMap) {
+        kakao.maps.event.addListener(window._kakaoMap, 'idle', function() {
+          renderArrows();
+        });
+        window._arrowEventRegistered = true;
+      }
+      // 브라우저가 DOM을 완전히 그리고 스타일(CSS)을 바인딩할 때까지 150ms 대기한 후
+      // 깨진 지도 크기를 재정렬(relayout)하고 선을 다시 표출하도록 강제 갱신합니다
+      if (window._kakaoMap) {
+        setTimeout(function() {
+          window._kakaoMap.relayout();
+          if (window._kakaoOverlays && window._kakaoOverlays.length > 0 && window._kakaoBounds) {
+            window._kakaoMap.setBounds(window._kakaoBounds);
+          }
+        }, 150);
+      }
+    }
+
+    // ── (구) redrawDayRoute 1차 정의는 아래 2차 정의(좌표 재검색·relayout 보강판)로 통합되어 제거됨 ──
+    //    동일 이름 함수가 두 번 선언되면 뒤의 것이 앞을 덮어써 디버깅이 어려우므로 단일화한다.
+
+    // ── 🎯 화면 픽셀 기준으로 화살표를 완벽하게 정렬하는 함수 ──
+    function renderArrows() {
+      if (window._kakaoArrows) {
+        window._kakaoArrows.forEach(function(overlay) { overlay.setMap(null); });
+      }
+      window._kakaoArrows = [];
+
+      if (!window._kakaoMap || !window._kakaoPolylines) return;
+
+      var proj = window._kakaoMap.getProjection();
+      if (!proj) return;
+
+
+      window._kakaoPolylines.forEach(function(polyObj) {
+        if (!polyObj.line.getMap() || !polyObj.path) return;
+
+        var path = polyObj.path;
+
+        for (var i = 0; i < path.length - 1; i++) {
+          var p1 = path[i];
+          var p2 = path[i + 1];
+
+          var px1 = proj.pointFromCoords(p1);
+          var px2 = proj.pointFromCoords(p2);
+
+          if (!px1 || !px2) continue;
+
+          var dx = px2.x - px1.x;
+          var dy = px2.y - px1.y;
+          var distPx = Math.sqrt(dx * dx + dy * dy);
+
+          // ★확대할수록 촘촘하게: 화면상 35px마다 화살표 1개(픽셀 고정 간격).
+          //   줌인하면 같은 구간의 픽셀거리가 늘어 화살표 수가 자동으로 증가한다.
+          //   상한을 200으로 크게 둬 30개에서 막히지 않게 한다.
+          var arrowCount = Math.min(Math.floor(distPx / 35), 200);
+          if (arrowCount < 1) continue;
+
+          var angle = Math.atan2(dy, dx);
+
+          for (var j = 1; j <= arrowCount; j++) {
+            var ratio = j / (arrowCount + 1);
+
+            var cx = px1.x + dx * ratio;
+            var cy = px1.y + dy * ratio;
+
+            // 화살표 크기(px). coordsFromPoint로 현재 줌 기준 좌표로 되돌리므로
+            // 매 렌더마다 화면상 동일한 픽셀 크기로 보인다(줌인해도 작게 유지).
+            var arrowSize = 5;
+            var angleOffset = Math.PI * 0.8;
+
+            var tipX = cx + Math.cos(angle) * (arrowSize / 2);
+            var tipY = cy + Math.sin(angle) * (arrowSize / 2);
+
+            var leftX = tipX + Math.cos(angle - angleOffset) * arrowSize;
+            var leftY = tipY + Math.sin(angle - angleOffset) * arrowSize;
+
+            var rightX = tipX + Math.cos(angle + angleOffset) * arrowSize;
+            var rightY = tipY + Math.sin(angle + angleOffset) * arrowSize;
+
+            var pTip = proj.coordsFromPoint(new kakao.maps.Point(tipX, tipY));
+            var pLeft = proj.coordsFromPoint(new kakao.maps.Point(leftX, leftY));
+            var pRight = proj.coordsFromPoint(new kakao.maps.Point(rightX, rightY));
+
+            var arrowLine = new kakao.maps.Polyline({
+              path: [pLeft, pTip, pRight],
+              strokeWeight: 2,
+              strokeColor: '#FFFFFF',
+              strokeOpacity: 1.0,
+              strokeStyle: 'solid'
+            });
+
+            arrowLine.setMap(window._kakaoMap);
+            window._kakaoArrows.push(arrowLine);
+          }
+        }
+      });
+    }
+
+
+
+    // ── Day 필터 변경 시 해당 마커만 보이도록 setBounds ──
+    function updateBoundsForDay(day) {
+      if (!window._kakaoMap || !MAP_PINS.length) return;
+      var pins = (day === 'all') ? MAP_PINS : MAP_PINS.filter(function(p) { return p.day == day; });
+      if (!pins.length) return;
+      var bounds = new kakao.maps.LatLngBounds();
+      pins.forEach(function(p) {
+        if (p.lat && p.lng) bounds.extend(new kakao.maps.LatLng(p.lat, p.lng));
+      });
+      window._kakaoMap.setBounds(bounds);
+      layoutMapLabels(); // 범위가 같아 idle 이 안 와도 보이는 마커가 바뀌었으니 다시 잡는다
+    }
+
+    // ── 이름표 자리 잡기 ──
+    //   차례는 방문 순서(누른 마커가 맨 앞). 자리는 아래 → 위 → 오른쪽 → 왼쪽 중 처음 비는 곳.
+    //   먼저 놓인 이름표 · 다른 마커 · 지도 위 상자(날씨 알림 등)와 겹치거나 지도 밖으로 나가면 다음 자리,
+    //   네 곳이 다 안 되면 그 이름표만 숨긴다(마커는 보임). 그래서 축소하면 마커만, 확대하면 이름표가 뜬다.
+    //   원이 서로 겹치는 마커는 같은 때에 작은 점으로 바꾸고(숙소 빼고), 안 겹치게 되면 원래 마커로 돌린다.
+    window._mapLabelsOn = true;     // 휴대폰 「이름」 단추
+    window._pinnedLabelKey = null;  // 누른 마커: 이름 전체를 먼저 보인다
+
+    // 1px 여유: 카카오는 마커를 정수 px 에 놓으므로 소수 좌표로만 비교하면 1px 미만으로 닿는다
+    function _rectsHit(a, b) {
+      var m = 1;
+      return a.x < b.x + b.w + m && b.x < a.x + a.w + m && a.y < b.y + b.h + m && b.y < a.y + a.h + m;
+    }
+
+    function layoutMapLabels() {
+      var map = window._kakaoMap, items = window._kakaoOverlays;
+      var box = document.getElementById('kakaoMap');
+      if (!map || !items || !items.length || !box || !box.clientWidth) return;
+      var proj = map.getProjection();
+      if (!proj) return;
+      var W = box.clientWidth, H = box.clientHeight, boxR = box.getBoundingClientRect();
+      var EDGE = 4, GAP = 3;
+
+      var toggle = document.getElementById('mapLabelToggle');
+      var labelsOn = window._mapLabelsOn || !(toggle && toggle.offsetWidth); // PC 에는 단추가 없으니 늘 켬
+
+      var shown = items.filter(function(it) { return it.el && it.overlay.getMap(); });
+      shown.forEach(function(it) {
+        var pt = proj.containerPointFromCoords(it.overlay.getPosition());
+        it._x = pt.x; it._y = pt.y;
+        it._same = it.labelEl.textContent + '@' + Math.round(pt.x) + ',' + Math.round(pt.y);
+        it.el.classList.remove('small');
+      });
+      // 지금 배율에서 원이 다른 마커와 겹치면 작은 점으로(같은 장소 두 번은 빼고). 숙소는 하루의 기준점이라 줄이지 않는다
+      var dist = function(a, b) { return Math.hypot(a._x - b._x, a._y - b._y); };
+      var full = shown.length ? shown[0].el.firstChild.offsetWidth : 0;
+      shown.forEach(function(it) {
+        if (it.type !== 'stay' && shown.some(function(o) { return o !== it && o._same !== it._same && dist(o, it) < full; })) it.el.classList.add('small');
+      });
+      var markers = shown.map(function(it) {
+        it._r = it.el.firstChild.offsetWidth / 2;
+        return { it: it, x: it._x - it._r, y: it._y - it._r, w: it._r * 2, h: it._r * 2 };
+      });
+      // 누른 마커가 점이면 그 자리에 겹쳐 있는 점들의 이름도 함께 보인다
+      var tapped = shown.find(function(it) { return it.key === window._pinnedLabelKey; });
+      var isPinned = function(it) {
+        return !!tapped && (it === tapped || (tapped.el.classList.contains('small') && it.el.classList.contains('small') && dist(it, tapped) < it._r + tapped._r));
+      };
+      var blocks = [];
+      ['.weather-alert', '#demoNotice', '#mapLabelToggle'].forEach(function(sel) {
+        var e = document.querySelector('#mapView ' + sel);
+        var r = e && e.getBoundingClientRect();
+        if (r && r.width && r.height) blocks.push({ x: r.left - boxR.left, y: r.top - boxR.top, w: r.width, h: r.height });
+      });
+
+      var rank = function(it) { return (isPinned(it) ? -10000 : 0) + it.order; };
+      var placed = [], seen = {};
+      shown.slice().sort(function(a, b) { return rank(a) - rank(b); }).forEach(function(it) {
+        var lab = it.labelEl, pinned = isPinned(it);
+        it.el.classList.toggle('pinned', pinned);
+        // 쌓는 순서: 숙소가 맨 위, 그다음 누른 마커, 나머지는 방문 순서가 앞인 것이 위
+        it.overlay.setZIndex(it.type === 'stay' ? 3000 : (pinned ? 2000 : 1000) - it.order);
+        // 같은 장소가 두 번(첫날 끝 숙소 = 둘째 날 시작 숙소) 나오면 이름표는 한 번만
+        var same = it._same;
+        if ((!labelsOn && !pinned) || seen[same]) { lab.classList.remove('on'); return; }
+        seen[same] = true;
+
+        var w = lab.offsetWidth, h = lab.offsetHeight, r = it._r;
+        var spots = [[-w / 2, r + GAP], [-w / 2, -r - GAP - h], [r + GAP, -h / 2], [-r - GAP - w, -h / 2]];
+        var pick = null;
+        for (var i = 0; i < spots.length && !pick; i++) {
+          var dx = spots[i][0], dy = spots[i][1];
+          if (i < 2) { // 아래 · 위는 가장자리에 걸리면 마커에 붙은 채로 안쪽으로 민다
+            var x0 = it._x + dx, x1 = Math.min(Math.max(x0, EDGE), W - EDGE - w);
+            if (Math.abs(x1 - x0) < w / 2) dx += x1 - x0;
+          }
+          var rect = { x: it._x + dx, y: it._y + dy, w: w, h: h };
+          if (rect.x < EDGE || rect.y < EDGE || rect.x + w > W - EDGE || rect.y + h > H - EDGE) continue;
+          if (placed.some(function(p) { return _rectsHit(rect, p); })) continue;
+          if (blocks.some(function(p) { return _rectsHit(rect, p); })) continue;
+          if (markers.some(function(m) { return m.it !== it && _rectsHit(rect, m); })) continue;
+          pick = { dx: dx, dy: dy, rect: rect };
+        }
+        if (!pick && pinned) pick = { dx: spots[0][0], dy: spots[0][1], rect: { x: it._x + spots[0][0], y: it._y + spots[0][1], w: w, h: h } };
+        if (!pick) { lab.classList.remove('on'); return; }
+        lab.style.left = pick.dx + 'px';
+        lab.style.top = pick.dy + 'px';
+        lab.classList.add('on');
+        placed.push(pick.rect);
+      });
+    }
+
+    // 마커를 누르면 그 이름 전체를 보이고, 한 번 더 누르면 원래대로
+    function _pinMapLabel(item) {
+      window._pinnedLabelKey = (window._pinnedLabelKey === item.key) ? null : item.key;
+      layoutMapLabels();
+    }
+
+    function toggleMapLabels() {
+      window._mapLabelsOn = !window._mapLabelsOn;
+      var b = document.getElementById('mapLabelToggle');
+      if (b) b.setAttribute('aria-pressed', String(window._mapLabelsOn));
+      layoutMapLabels();
+    }
+
+    // 지금 보이는 마커 · 동선 전체가 들어오게 범위를 맞춘다(날짜 · 종류 단추로 숨긴 것은 뺌).
+    //   휴대폰은 아래 날씨 알림이 지도를 덮으므로 그만큼 아래 여백을 더 준다.
+    function fitMapToVisibleRoute() {
+      var map = window._kakaoMap;
+      if (!map) return;
+      map.relayout();
+      var b = new kakao.maps.LatLngBounds(), n = 0;
+      (window._kakaoOverlays || []).forEach(function(o) {
+        if (o.overlay.getMap()) { b.extend(o.overlay.getPosition()); n++; }
+      });
+      (window._kakaoPolylines || []).forEach(function(p) {
+        if (p.path && p.line.getMap()) p.path.forEach(function(c) { b.extend(c); n++; });
+      });
+      if (!n) return;
+      var bottom = 40, box = document.getElementById('kakaoMap');
+      var alertEl = document.querySelector('#mapView .weather-alert');
+      var ar = alertEl && alertEl.getBoundingClientRect();
+      if (box && ar && ar.height) bottom = Math.max(bottom, box.getBoundingClientRect().bottom - ar.top + 12);
+      // 좌우 여백은 마커 반지름(12) + 4. 오른쪽은 확대 단추 쪽이라 조금 더. 더 크면 390 폭에서 한 단계 더 축소된다
+      map.setBounds(b, 40, 36, bottom, 16);
+      layoutMapLabels();
+    }
+
+    // ── 드래그/교체 후 해당 Day 동선 다시 그리기 (좌표 누락 시 재검색·relayout 보강판) ──
+    function redrawDayRoute(dayNum) {
+      if (!window._kakaoMap || !window._kakaoPolylines) return;
+
+      var section = document.querySelector('.day-section[data-day="' + dayNum + '"]');
+      if (!section) return;
+      var keys = Array.from(section.querySelectorAll('.place-row[data-key]')).map(function(r) { return r.dataset.key; });
+
+      var pinByKey = {};
+      MAP_PINS.forEach(function(p) { pinByKey[p.key] = p; });
+
+      // 🩹 [핵심 수정] 이 날 경로에 '좌표가 아직 없는' 핀이 있으면, 그것부터 카카오 검색으로
+      //    좌표를 채운 뒤에 그린다. (좌표 누락으로 path가 비어 지도가 깨지고 새로고침해야 하던 버그 차단)
+      var needResolve = keys
+              .map(function(k) { return pinByKey[k]; })
+              .filter(function(p) { return p && (!p.isFound || !p.lat || !p.lng); });
+
+      function _draw() {
+        // 기존 폴리라인 제거
+        window._kakaoPolylines.forEach(function(p) { if (p.day == dayNum) p.line.setMap(null); });
+        window._kakaoPolylines = window._kakaoPolylines.filter(function(p) { return p.day != dayNum; });
+
+        var route = DAY_ROUTES.find(function(r) { return r.day == dayNum; });
+        var straightPath = keys.map(function(k) {
+          var p = pinByKey[k];
+          return (p && p.lat && p.lng && p.isFound) ? new kakao.maps.LatLng(p.lat, p.lng) : null;
+        }).filter(Boolean);
+
+        // ★도로 경로 우선(segPaths) — 없으면 마커 직선 폴백
+        var path = [];
+        var hasRoad = route && Array.isArray(route.segPaths) && route.segPaths.some(function(s){ return Array.isArray(s) && s.length >= 2; });
+        if (hasRoad) {
+          for (var i = 0; i < keys.length; i++) {
+            var p = pinByKey[keys[i]];
+            if (p && p.lat && p.lng && p.isFound) path.push(new kakao.maps.LatLng(p.lat, p.lng));
+            var seg = route.segPaths[i];
+            if (Array.isArray(seg) && seg.length >= 2) seg.forEach(function(c){ path.push(new kakao.maps.LatLng(c[0], c[1])); });
+          }
+        } else {
+          path = straightPath;
+        }
+
+        // 🩹 지도 자체는 항상 살아있도록 relayout + (이 날 핀 기준) bounds 재적용
+        if (window._kakaoMap) {
+          window._kakaoMap.relayout();
+          var dayPins = keys.map(function(k) { return pinByKey[k]; })
+                  .filter(function(p) { return p && p.lat && p.lng && p.isFound; });
+          if (dayPins.length > 0) {
+            var b = new kakao.maps.LatLngBounds();
+            dayPins.forEach(function(p) { b.extend(new kakao.maps.LatLng(p.lat, p.lng)); });
+            window._kakaoMap.setBounds(b);
+          }
+        }
+        if (path.length < 2) { setTimeout(renderArrows, 50); return; }
+
+        // ★폴리라인은 drawLivePolylines로 일원화(구간별 offset·왕복 분리 로직 공유).
+        //   여기서 직접 통짜 path로 그리면 왕복 겹침·중복선이 생기므로 전체 재렌더를 호출한다.
+        drawLivePolylines();
+
+        // 렌더링 주기가 꼬여 선 좌표가 0,0 픽셀로 강제 압축되는 현상을 차단하기 위해
+        // 레이아웃 동기화를 강제 실행합니다.
+        setTimeout(function() {
+          if (window._kakaoMap) window._kakaoMap.relayout();
+          renderArrows();
+        }, 50);
+      }
+
+      if (needResolve.length === 0 || typeof kakao === 'undefined' || !kakao.maps.services) {
+        _draw();
+        return;
+      }
+
+      // 좌표 누락 핀 재검색
+      var ps = new kakao.maps.services.Places();
+      var pending = needResolve.length;
+      needResolve.forEach(function(pin) {
+        var q = pin.label || pin.name || '';
+        ps.keywordSearch(q, function(data, status) {
+          if (status === kakao.maps.services.Status.OK && data && data.length) {
+            pin.lat = parseFloat(data[0].y);
+            pin.lng = parseFloat(data[0].x);
+            pin.isFound = true;
+          }
+          if (--pending <= 0) _draw();
+        });
+      });
+    }
+
+    // ── 드래그 재정렬 초기화 ──
+    function initDragAndDrop() {
+      var dragSrc = null;
+      document.querySelectorAll('.place-row[data-key]').forEach(function(row) {
+        row.setAttribute('draggable', 'true');
+
+        row.addEventListener('dragstart', function(e) {
+          // 확정(잠금) 상태에서는 순서 변경 불가
+          if (window._planConfirmed) { e.preventDefault(); return false; }
+          dragSrc = this;
+          setTimeout(function() { row.style.opacity = '0.4'; }, 0);
+        });
+        row.addEventListener('dragend', function() {
+          this.style.opacity = '1';
+          document.querySelectorAll('.place-row[data-key]').forEach(function(r) { r.style.outline = ''; });
+        });
+        row.addEventListener('dragover', function(e) { e.preventDefault(); });
+        row.addEventListener('dragenter', function() {
+          if (dragSrc !== this) this.style.outline = '2px dashed var(--sage)';
+        });
+        row.addEventListener('dragenter', function(e) {
+          e.preventDefault();
+          if (dragSrc !== this) this.style.outline = '2px dashed var(--sage)';
+        });
+        row.addEventListener('dragleave', function(e) {
+          // 🎯 중요: 마우스가 자식 노드(글자, 아이콘 등)로 이동한 게 아니라, 진짜로 해당 칸을 완전히 벗어났을 때만 점선을 지웁니다.
+          if (e.relatedTarget && this.contains(e.relatedTarget)) {
+            return; // 자식 노드로 들어간 거라면 점선 유지하고 무시!
+          }
+          this.style.outline = '';
+        });
+        row.addEventListener('drop', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          this.style.outline = ''; // 마우스를 놓았으니 점선 제거
+          if (!dragSrc || dragSrc === this) return;
+
+          var srcSection = dragSrc.closest('.day-section');
+          var tgtSection = this.closest('.day-section');
+          if (srcSection !== tgtSection) { toast('같은 날 안에서만 순서를 바꿀 수 있어요.'); return; }
+
+          var dayNum = parseInt(tgtSection.dataset.day);
+
+          // 1. DOM 스왑
+          var tmpHtml = dragSrc.innerHTML; dragSrc.innerHTML = this.innerHTML; this.innerHTML = tmpHtml;
+          var tmpKey  = dragSrc.dataset.key; dragSrc.dataset.key = this.dataset.key; this.dataset.key = tmpKey;
+
+          // 2. MAP_ITINERARY 글로벌 배열 강제 동기화 (가장 중요)
+          var dayData = MAP_ITINERARY.find(function(d) { return d.day == dayNum; });
+          if (dayData && dayData.places) {
+            var newDOMKeys = Array.from(tgtSection.querySelectorAll('.place-row[data-key]')).map(function(r) { return r.dataset.key; });
+            var placesOnly = dayData.places.filter(function(p) { return !p.transit; });
+            var transitsOnly = dayData.places.filter(function(p) { return p.transit; });
+
+            // 화면 순서대로 배열 재정렬
+            placesOnly.sort(function(a, b) { return newDOMKeys.indexOf(a.key) - newDOMKeys.indexOf(b.key); });
+
+            var newPlaces = [];
+            for (var i = 0; i < placesOnly.length; i++) {
+              newPlaces.push(placesOnly[i]);
+              if (i < transitsOnly.length) newPlaces.push(transitsOnly[i]);
+            }
+            dayData.places = newPlaces;
+          }
+
+          // 3. DAY_ROUTES 전역 키 동기화
+          var route = DAY_ROUTES.find(function(r) { return r.day == dayNum; });
+          if (route) {
+            route.keys = Array.from(tgtSection.querySelectorAll('.place-row[data-key]')).map(function(r) { return r.dataset.key; });
+          }
+
+          // 4. 세션 & DB 저장 호출
+          sessionStorage.setItem('ai_generated_route', JSON.stringify(MAP_ITINERARY));
+          if (window._currentTripId) {
+            // 🎯 순서 변경 시 저장 + 카카오 보정된 결과를 받아 화면을 다시 그린다
+            api.post('/api/trips/' + window._currentTripId + '/routes/reorder', MAP_ITINERARY)
+                    .then(function(res) {
+                      if (!res.success) { toast('⚠️ DB 저장 실패: ' + res.message); return; }
+                      // 보정된 JSON으로 화면 전체 재렌더 (transit 거리·시간·비용 + 동선 갱신)
+                      if (typeof initMapPage === 'function') initMapPage();
+                    })
+                    .catch(function(err) { console.warn('DB 저장 에러:', err); });
+          } else {
+            redrawDayRoute(dayNum);
+          }
+        });
+      });
+    }
+
+    // ── 카카오맵 길찾기 ──
+    function openKakaoNavi(name, lat, lng) {
+      window.open('https://map.kakao.com/link/to/' + encodeURIComponent(name) + ',' + lat + ',' + lng, '_blank');
+    }
+
+
+    // 마커 클릭 → 해당 장소를 일정 목록에서 강조 + 스크롤
+    // (Thymeleaf 인라인 파서 오해 방지를 위해 대괄호 문자열 리터럴을 쓰지 않음)
+    function focusPlaceRow(key) {
+      try {
+        var sel = '.place-row' + String.fromCharCode(91) + 'data-key' + String.fromCharCode(93);
+        var all = document.querySelectorAll(sel);
+        var row = null;
+        for (var i = 0; i < all.length; i++) {
+          if (all[i].getAttribute('data-key') === String(key)) { row = all[i]; break; }
+        }
+        if (!row) return;
+
+        var section = row.closest('.day-section');
+        if (section && section.style.display === 'none') {
+          var dayVal = section.getAttribute('data-day');
+          var tab = document.getElementById('dtab-' + dayVal);
+          if (tab && typeof showDay === 'function') showDay(dayVal, tab);
+        }
+
+        var prev = document.querySelectorAll('.place-row.row-focus');
+        for (var j = 0; j < prev.length; j++) {
+          prev[j].classList.remove('row-focus');
+          prev[j].style.outline = '';
+          prev[j].style.background = '';
+        }
+        row.classList.add('row-focus');
+        row.style.outline = '2px solid var(--sage)';
+        row.style.borderRadius = '10px';
+        row.style.background = 'var(--sage-pale)';
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        setTimeout(function () {
+          row.classList.remove('row-focus');
+          row.style.outline = '';
+          row.style.background = '';
+        }, 2200);
+      } catch (e) {
+        console.warn('focusPlaceRow 강조 실패:', e);
+      }
+    }
+
+    // ── 🔥 [기능 해결]: AI가 동적으로 뿌려준 유니크 키(uniq1, uniq2) 클릭 시 데이터 누락 방지 팝업 가드 ──
+    function showMapPlacePopup(nameOrKey, type) {
+      var realName = nameOrKey;
+      var realSub = "추천 장소";
+
+      // 1. 전역 MAP_ITINERARY 캐시를 탐색하여 AI가 넣어준 진짜 한글 장소명 매핑
+      if (MAP_ITINERARY && Array.isArray(MAP_ITINERARY)) {
+        for (let day of MAP_ITINERARY) {
+          if (day.places && Array.isArray(day.places)) {
+            // name으로 먼저 찾고, 없으면 key로 fallback
+            let found = day.places.find(p => p.name === nameOrKey || p.key === nameOrKey);
+            if (found) {
+              realName = found.name || realName;
+              realSub  = found.sub  || realSub;
+              break;
+            }
+          }
+        }
+      }
+
+      // 2. 주입된 데이터 핀 캐시 확보
+      var pin = MAP_PINS.find(function(p) { return p.label === realName || p.key === nameOrKey; });
+      var modal = document.getElementById('mapPlaceModal');
+      if (!modal) return;
+
+      // 카테고리 텍스트 요약 규격화
+      var tl = type === 'stay' ? '🏨 숙소' : (type === 'food' ? '🍽️ 맛집' : (type === 'cafe' ? '☕ 카페' : '📍 관광지'));
+
+      // ✨ [수정] 정의되지 않았던 name 대신 realName으로 깨진 DOM 안전하게 바인딩
+      document.getElementById('mpPlace').textContent = realName;
+      document.getElementById('mpType').textContent  = tl;
+
+      // 3. 길찾기 버튼 바인딩 (안전하게 realName 기반 따옴표 처리 및 예외 가드 가동)
+      var naviEl = document.getElementById('mpNavi');
+      if (naviEl) {
+        if (pin && pin.lat && pin.lng) {
+          naviEl.innerHTML = '<button data-onclick="openKakaoNavi(\'' + _mjs(realName) + '\',' + Number(pin.lat) + ',' + Number(pin.lng) + ')" '
+                  + 'style="width:100%;padding:10px;border-radius:9px;background:#FEE500;color:#3C1E1E;border:none;'
+                  + 'cursor:pointer;font-size:13px;font-weight:700;margin-bottom:12px">🚗 카카오맵으로 길찾기</button>';
+        } else {
+          naviEl.innerHTML = '<div style="font-size:12px;color:var(--coral);text-align:center;padding:10px;background:#FEF3F2;border-radius:8px;margin-bottom:12px;">⚠️ 카카오 지도에서 정확한 좌표를 탐색하지 못했습니다.</div>';
+        }
+      }
+
+      document.getElementById('mpReviews').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">아직 후기가 없습니다.</div>';
+      document.getElementById('mpLinks').innerHTML = getMapLinks(realName);
+      modal.classList.add('open');
+    }
+
+    function getMapLinks(q) {
+      var e = encodeURIComponent(q);
+      return '<a href="https://map.naver.com/v5/search/'+e+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px;border-radius:9px;background:#03C75A;color:#fff;text-decoration:none;font-size:12px;font-weight:700">🗺️ 네이버 지도</a>'
+              + '<a href="https://map.kakao.com/?q='+e+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px;border-radius:9px;background:#FEE500;color:#3C1E1E;text-decoration:none;font-size:12px;font-weight:700">🗺️ 카카오맵</a>'
+              + '<a href="https://www.google.com/maps/search/?api=1&query='+e+'" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px;border-radius:9px;background:#4285F4;color:#fff;text-decoration:none;font-size:12px;font-weight:700">🗺️ 구글 맵</a>';
+    }
+
+    function showReviewDetail(place, type, stars, text) {
+      var m = document.getElementById('reviewDetailModal'); if (!m) return;
+      document.getElementById('rdPlace').textContent = place;
+      document.getElementById('rdType').textContent  = type;
+      document.getElementById('rdStars').textContent = stars;
+      document.getElementById('rdText').textContent  = text;
+      m.classList.add('open');
+    }
+
+
+
+    // ── 💡 1. 큐(대기열) 전역 변수 및 렌더링 (사용자가 직접 텍스트 수정 가능) ──
+    window._q = window._q || [];
+
+    function showReplaceInput(btn, key) {
+      const area = document.getElementById('ri-' + key);
+      if (!area) return;
+      const isOpen = area.style.display !== 'none';
+      area.style.display = isOpen ? 'none' : 'block';
+    }
+
+    function addQueue(key) {
+      const txt = document.getElementById('rt-' + key)?.value.trim();
+      if (!txt) { toast('요구사항을 입력해주세요.'); return; }
+
+      // key → 실제 장소명 역참조 (MAP_PINS 우선, 없으면 MAP_ITINERARY 탐색)
+      let placeName = key; // fallback
+      const pin = MAP_PINS.find(p => p.key === key);
+      if (pin && pin.label) {
+        placeName = pin.label;
+      } else if (MAP_ITINERARY && Array.isArray(MAP_ITINERARY)) {
+        outer: for (const day of MAP_ITINERARY) {
+          if (!day.places) continue;
+          for (const p of day.places) {
+            if (p.key === key && p.name) { placeName = p.name; break outer; }
+          }
+        }
+      }
+
+      // 중복 등록 방지
+      const alreadyExists = _q.some(q => q.place === placeName);
+      if (alreadyExists) { toast('이미 교체 요청 목록에 있습니다.'); return; }
+
+      _q.push({ place: placeName, req: txt });
+
+      // 입력창 초기화 및 닫기
+      const inp = document.getElementById('rt-' + key);
+      if (inp) inp.value = '';
+      const area = document.getElementById('ri-' + key);
+      if (area) area.style.display = 'none';
+
+      renderQ();
+      toast('교체 요청이 등록됐습니다 ✓');
+    }
+
+    function renderQ() {
+      const box = document.getElementById('queueBox');
+      const items = document.getElementById('qItems');
+      const cnt = document.getElementById('qCnt');
+      const btn = document.getElementById('btnAll');
+
+      if (!box || !items) return;
+
+// 목록이 길어지면 스크롤 생성 (패널을 넘지 않도록 화면 비율로 제한)
+      items.style.maxHeight = 'min(240px, 32vh)';
+      items.style.overflowY = 'auto';
+      items.style.paddingRight = '5px';
+
+      if (_q.length === 0) {
+        box.classList.remove('has');
+        cnt.textContent = '0';
+        if (btn) btn.disabled = true;
+        items.innerHTML = '';
+        return;
+      }
+
+      box.classList.add('has');
+      box.style.display = 'block';
+      cnt.textContent = _q.length;
+      if (btn) btn.disabled = false;
+
+      // ✨ [수정] 텍스트 박스가 아니라 타이핑 가능한 <input> 폼으로 교체!
+      items.innerHTML = _q.map((q, i) =>
+              `<div class="q-item" style="display:flex; flex-direction:column; gap:6px; background:#fff; border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="q-place" style="font-weight:700; font-size:12px; color:var(--coral);">🎯 타겟: ${_mx(q.place)}</div>
+            <button class="q-rm" data-onclick="rmQ(${i})" style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; line-height:1;">✕</button>
+          </div>
+          <input type="text" value="${_mx(q.req)}" data-oninput="updateQueueReq(${i}, this.value)"
+                 style="width:100%; border:1px solid var(--border2); border-radius:4px; padding:6px 8px; font-size:11px; outline:none; box-sizing:border-box; background:#F9FAFB;"
+                 placeholder="예: 바다가 보이는 조용한 카페로 바꿔주세요">
+        </div>`
+      ).join('');
+    }
+
+    // 항목 삭제
+    function rmQ(i) {
+      _q.splice(i, 1);
+      renderQ();
+      toast('요청 제거됨');
+      // 큐가 다 비워지면 재계산 바(recalcBar) 숨기기
+      if (_q.length === 0) {
+        const rb = document.getElementById('recalcBar');
+        if (rb) rb.style.display = 'none';
+      }
+    }
+
+    // ✨ 사용자가 input 창에 타이핑할 때 배열 데이터를 실시간 갱신
+    function updateQueueReq(idx, newVal) {
+      if (_q[idx]) _q[idx].req = newVal;
+    }
+
+    function removeQueue(idx) {
+      _q.splice(idx, 1);
+      renderQ();
+      if (_q.length === 0) {
+        var rb = document.getElementById('recalcBar');
+        if (rb) rb.style.display = 'none';
+      }
+    }
+
+    // 사용자가 input에 타이핑할 때마다 배열 데이터 실시간 업데이트
+    function updateQueueReq(idx, newVal) {
+      if (_q[idx]) _q[idx].req = newVal;
+    }
+
+    // ── 💡 2. 백엔드 AI로 부분 교체 요청 쏘기 ──
+
+    async function execAllReplace() {
+      const tripId = window._currentTripId;
+      if (!tripId || _q.length === 0) return;
+
+      // 고정 경로 모드면 서버에 요청하지 않고 바로 안내만 한다.
+      if (typeof demoBlockReplace === 'function' && demoBlockReplace()) return;
+
+      const btn = document.getElementById('btnAll');
+      const originalText = btn.innerHTML; // 원래 버튼 텍스트('✅ 전체 교체하기') 저장
+      const loadingOverlay = document.getElementById('replaceLoadingOverlay');
+
+      // 화면 잠그고 로딩창 띄우기 & 버튼 텍스트 변경
+      if (loadingOverlay) loadingOverlay.style.display = 'flex';
+      btn.innerHTML = '⏳ AI 부분 교체 중...';
+      btn.disabled = true;
+
+      try {
+        // ✨ 올바른 백엔드 주소로 연결!
+        const res = await api.post(`/api/trips/${tripId}/routes/replace`, { requests: _q });
+
+        if (res.success && res.data) {
+          toast('✅ AI 부분 교체가 완료되었습니다! 화면을 갱신합니다.');
+
+          // 1.5초 뒤 완벽하게 새로고침
+          setTimeout(() => {
+            location.reload();
+          }, 1500);
+
+        } else {
+          toast('<span style="color: black;">⚠️ ' + (res.message || '교체처리에 실패했습니다.') + '</span>');
+          if (loadingOverlay) loadingOverlay.style.display = 'none';
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
+      } catch(e) {
+        toast('<span style="color: black;">⚠️ 교체처리에 실패했습니다.</span>');
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+
+    /* ── 🌤️ 지도 화면 전용: 날씨 팝업 열기 ── */
+    async function openMapWeatherPopup() {
+      const tripId = window._currentTripId || sessionStorage.getItem('plannerDraftId');
+      if (!tripId) { toast('플랜 정보가 없습니다.'); return; }
+
+      // 1. DB에서 현재 플랜의 날짜와 여행지 조회
+      const r = await api.get(`/api/trips/${tripId}`);
+      if (!r.success || !r.data) { toast('플랜 정보를 불러올 수 없습니다.'); return; }
+      const t = r.data;
+      const s = t.startDate;
+      const e = t.endDate;
+      const locStr = t.destination ? t.destination.split(' ')[0] : '서울';
+
+      document.getElementById('mwp-title').textContent = `🌤️ ${locStr} 여행 날씨 예보`;
+
+      const ds = new Date(s);
+      const de = new Date(e);
+      const today = new Date(); today.setHours(0,0,0,0);
+      const diffDays = Math.floor((ds - today) / 86400000);
+
+      const noData = document.getElementById('mwp-no-data');
+      const dataWrap = document.getElementById('mwp-data-wrap');
+
+      // 예보 범위를 벗어난 경우 (14일 초과)
+      if (diffDays > 14 || diffDays < 0) {
+        noData.style.display = 'block';
+        dataWrap.style.display = 'none';
+        document.getElementById('mapWeatherPopup').classList.add('open');
+        return;
+      }
+
+      noData.style.display = 'none';
+      dataWrap.style.display = 'block';
+      document.getElementById('mapWeatherPopup').classList.add('open');
+
+      const grid = document.getElementById('mwp-grid');
+      grid.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:16px 0">로딩 중...</div>';
+
+      try {
+        const res = await fetch('/api/maps/weather?region=' + encodeURIComponent(locStr));
+        const json = await res.json();
+        if (!json.success || !json.data || json.data.length === 0) throw new Error('데이터 없음');
+
+        const allDays = [];
+        for (let d = new Date(ds); d <= de; d.setDate(d.getDate()+1)) allDays.push(new Date(d));
+        const previewDays = allDays.slice(0, 7); // 최대 7일치 표출
+
+        grid.style.gridTemplateColumns = `repeat(${previewDays.length}, 1fr)`;
+
+        const skyIconMap = { 1:'☀️', 3:'⛅', 4:'☁️' };
+        const ptyIconMap = { 1:'🌧️', 2:'🌧️', 3:'🌨️', 4:'🌦️' };
+        const skyDescMap = { 1:'맑음', 3:'구름많음', 4:'흐림' };
+        const ptyDescMap = { 1:'비', 2:'비/눈', 3:'눈', 4:'소나기' };
+        const DAYS_KO = ['일','월','화','수','목','금','토'];
+        const fmt = d => `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} (${DAYS_KO[d.getDay()]})`;
+
+        const warnDays = [];
+        const warnDayNums = [];
+        const allDayNums = [];
+
+        grid.innerHTML = previewDays.map((d, i) => {
+          const dto = json.data[i] || json.data[json.data.length - 1];
+          if (!dto) return '';
+
+          const warn = (dto.pop && dto.pop >= 60) || (dto.pty && dto.pty > 0);
+          const icon = (dto.pty && dto.pty > 0) ? (ptyIconMap[dto.pty] || '🌧️') : (skyIconMap[dto.sky] || '⛅');
+          const desc = (dto.pty && dto.pty > 0) ? (ptyDescMap[dto.pty] || '강수') : (skyDescMap[dto.sky] || '맑음');
+
+          allDayNums.push(i + 1);
+          if (warn) {
+            warnDays.push(`${d.getMonth()+1}/${d.getDate()}`);
+            warnDayNums.push(i + 1);
+          }
+
+          return `<div class="w-item${warn ? ' w-warn' : ''}">
+        <div class="w-icon">${icon}</div>
+        <div class="w-day">${fmt(d)}</div>
+        <div class="w-temp">${dto.tmp || 0}°C</div>
+        <div class="w-desc">${desc}</div>
+        ${dto.pop > 0 ? `<div style="font-size:9px;color:var(--sky);margin-top:2px">💧 ${dto.pop}%</div>` : ''}
+        ${warn ? '<div style="font-size:9px;color:var(--coral);margin-top:2px;font-weight:700">실내 추천</div>' : ''}
+      </div>`;
+        }).join('');
+
+        const alertEl = document.getElementById('mwp-alert');
+        const replaceWrap = document.getElementById('mwp-ai-replace-wrap');
+        const replaceBtns = document.getElementById('mwp-ai-replace-btns');
+
+        // 🎯 [핵심 변경 가드]: 읽기 전용 주소(/plan/view)로 들어왔을 때는 교체 기능을 원천 무력화합니다.
+        if (location.pathname.includes('/plan/view')) {
+          replaceWrap.style.display = 'block';
+          replaceWrap.style.background = '#F3F4F6';
+          replaceWrap.style.borderColor = '#D1D5DB';
+
+          if (alertEl) alertEl.style.display = 'none';
+
+          // 알림 타이틀 변경 및 버튼 구역을 가드용 안내 문구로 동적 갈아끼우기
+          replaceWrap.querySelector('div').innerHTML = '🔒 읽기 전용 열람 모드 안내';
+          replaceBtns.innerHTML = '<div style="font-size:12px; color:var(--text3); font-weight:600; padding:4px 2px;">현재 읽기 전용 링크로 접속 중이므로 AI 일정 교체 기능이 제한됩니다.</div>';
+          return;
+        }
+
+        // ── 편집 권한이 있는 원래 유저 전용 화면 렌더링 로직 (원래 원본 유지) ──
+        replaceWrap.style.display = 'block';
+        if (warnDayNums.length > 0) {
+          alertEl.style.display = 'block';
+          alertEl.textContent = `⚠️ ${warnDays.join(', ')} 악천후 감지 — 실내 장소 우선 배치를 권장합니다`;
+
+          replaceBtns.innerHTML = warnDayNums.map(dayNum =>
+                  `<button data-onclick="requestMapIndoorAlternative(${dayNum});_removeOpenClass('mapWeatherPopup')"
+               style="padding:8px 14px; background:var(--sage); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">
+             ✨ Day ${dayNum} 실내 일정으로 교체
+           </button>`
+          ).join('');
+        } else {
+          alertEl.style.display = 'none';
+          replaceBtns.innerHTML = allDayNums.map(dayNum =>
+                  `<button data-onclick="requestMapIndoorAlternative(${dayNum});_removeOpenClass('mapWeatherPopup')"
+               style="padding:8px 14px; background:var(--sage); color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">
+             ✨ Day ${dayNum} 실내 일정으로 교체 (테스트)
+           </button>`
+          ).join('');
+        }
+
+      } catch (err) {
+        grid.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:16px 0">날씨 정보를 불러올 수 없습니다.</div>';
+      }
+    }
+    async function requestMapIndoorAlternative(dayNum) {
+
+      if (window._planConfirmed) {
+        toast('🔒 일정이 확정되어 있습니다. 좌측 상단의 [수정] 버튼을 눌러 수정 모드로 전환한 뒤 진행해 주세요.');
+        return;
+      }
+
+      const tripId = window._currentTripId || sessionStorage.getItem('plannerDraftId');
+      if (!tripId) { toast('플랜 정보가 없습니다.'); return; }
+
+      // 실내 일정 교체도 AI 호출이므로 고정 경로 모드에서는 막는다.
+      if (typeof demoBlockReplace === 'function' && demoBlockReplace()) return;
+
+      // 로딩을 알리기 위해 임시 토스트 창 띄우기
+      toast(`🤖 AI가 Day ${dayNum} 일정을 실내 코스로 전면 교체 중입니다...`, 6000);
+
+      try {
+        // 백엔드 컨트롤러 경로: @PostMapping("/indoor-replace") 형식에 완벽 매핑
+        // 쿼리 파라미터로 day 전달
+        const res = await api.post(`/api/trips/${tripId}/routes/indoor-replace?day=${dayNum}`, {});
+
+        if (res.success && res.data) {
+          toast(`✨ Day ${dayNum} 실내 일정 전환 완료! 동선을 재구성합니다.`);
+
+          // 백엔드에서 새로 업데이트되어 내려온 경로 JSON 확보
+          let cleanJson = res.data;
+          if (typeof cleanJson === 'string' && cleanJson.includes('[')) {
+            cleanJson = cleanJson.substring(cleanJson.indexOf('['), cleanJson.lastIndexOf(']') + 1);
+          } else if (typeof cleanJson === 'object') {
+            cleanJson = JSON.stringify(cleanJson);
+          }
+
+          // 세션 동합 저장소에 갱신 주입하여 잔상 제거
+          sessionStorage.setItem('ai_generated_route', cleanJson);
+
+          // 1초 뒤 브라우저를 깔끔하게 새로고침하여 바뀐 실내 마커와 동선 화살표를 다시 그림
+          setTimeout(() => {
+            location.reload();
+          }, 1000);
+
+        } else {
+          toast('⚠️ 실내 일정 교체 처리에 실패했습니다.');
+        }
+      } catch (err) {
+        console.error('[IndoorReplace] 통신 에러:', err);
+        toast('⚠️ AI 서버 응답 지연이 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      }
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  ★숙소 실제 금액 확인/입력 + 예약 딥링크 (여기어때·카카오)
+    // ════════════════════════════════════════════════════════
+
+    function findStayByKey(key) {
+      for (const day of (MAP_ITINERARY || [])) {
+        if (!day.places) continue;
+        const p = day.places.find(x => x.key === key);
+        if (p) return { day, place: p };
+      }
+      return null;
+    }
+
+    function extractAmount(str) {
+      const m = (str || '').match(/₩([\d,]+)(?:×(\d+))?/);
+      if (!m) return 0;
+      let amt = parseInt(m[1].replace(/,/g, ''));
+      if (m[2]) amt *= parseInt(m[2]);
+      return amt;
+    }
+
+    function recalcDayBudget(day) {
+      let total = 0;
+      (day.places || []).forEach(p => {
+        total += p.transit ? extractAmount(p.transit) : extractAmount(p.sub);
+      });
+      day.budget = '₩' + total.toLocaleString();
+    }
+
+    // ── 모달 1: 사이트 선택 ──
+    function openSiteModal(key) {
+      const found = findStayByKey(key);
+      if (!found) { toast('숙소 정보를 찾을 수 없습니다.'); return; }
+      const overlay = document.getElementById('staySiteOverlay');
+      overlay.dataset.key = key;
+      document.getElementById('staySiteName').textContent = found.place.name || '숙소';
+      overlay.style.display = 'flex';
+    }
+    function closeSiteModal() {
+      document.getElementById('staySiteOverlay').style.display = 'none';
+    }
+
+    function gotoSite(site) {
+      const overlay = document.getElementById('staySiteOverlay');
+      const key = overlay.dataset.key;
+      const found = findStayByKey(key);
+      if (!found) return;
+      const info = window._stayBookingInfo || {};
+      const kw = found.place.name || info.dest || '';
+
+      let url;
+      if (site === 'yeogi') {
+        url = `https://www.yeogi.com/domestic-accommodations`
+                + `?keyword=${encodeURIComponent(kw)}`
+                + `&checkIn=${info.start || ''}&checkOut=${info.end || ''}`
+                + `&personal=${info.pax || 2}&typoCorrect=true`;
+      } else {
+        url = `https://booking.kakao.com/search/result`
+                + `?query=${encodeURIComponent(kw)}&from=user`;
+      }
+      window.open(url, '_blank');
+      closeSiteModal();
+      openPriceModal(key);
+    }
+
+    // ── 모달 2: 금액 입력 ──
+    function openPriceModal(key) {
+      const found = findStayByKey(key);
+      if (!found) { toast('숙소 정보를 찾을 수 없습니다.'); return; }
+      const overlay = document.getElementById('stayPriceOverlay');
+      overlay.dataset.key = key;
+      document.getElementById('stayPriceName').textContent = found.place.name || '숙소';
+
+      const cur = found.place.actualPrice || extractAmount(found.place.sub) || '';
+      document.getElementById('stayPriceInput').value = cur;
+
+      document.getElementById('otherStayName').value = '';
+      document.getElementById('otherStayPrice').value = '';
+      document.getElementById('otherStayBox').style.display = 'none';
+      document.getElementById('otherStayArrow').textContent = '▸';
+
+      overlay.style.display = 'flex';
+      setTimeout(() => document.getElementById('stayPriceInput').focus(), 50);
+    }
+    function closePriceModal() {
+      document.getElementById('stayPriceOverlay').style.display = 'none';
+    }
+
+    function onTopPriceInput() {
+      if (document.getElementById('stayPriceInput').value) {
+        document.getElementById('otherStayName').value = '';
+        document.getElementById('otherStayPrice').value = '';
+      }
+    }
+    function onOtherStayInput() {
+      const n = document.getElementById('otherStayName').value;
+      const p = document.getElementById('otherStayPrice').value;
+      if (n || p) document.getElementById('stayPriceInput').value = '';
+    }
+    function toggleOtherStay() {
+      const box = document.getElementById('otherStayBox');
+      const arrow = document.getElementById('otherStayArrow');
+      const open = box.style.display === 'none';
+      box.style.display = open ? 'block' : 'none';
+      arrow.textContent = open ? '▾' : '▸';
+    }
+
+    async function saveStayPrice() {
+      const overlay = document.getElementById('stayPriceOverlay');
+      const key = overlay.dataset.key;
+      const found = findStayByKey(key);
+      if (!found) return;
+
+      const topVal    = parseInt((document.getElementById('stayPriceInput').value || '').replace(/[^\d]/g, ''));
+      const otherName = (document.getElementById('otherStayName').value || '').trim();
+      const otherVal  = parseInt((document.getElementById('otherStayPrice').value || '').replace(/[^\d]/g, ''));
+
+      let finalName = found.place.name;
+      let finalVal;
+
+      if (otherName && otherVal > 0) {
+        const region = (window._stayBookingInfo && window._stayBookingInfo.dest) || '';
+        try {
+          const r = await api.get(`/api/kakao/place?query=${encodeURIComponent(otherName)}&region=${encodeURIComponent(region)}`);
+          finalName = (r.success && r.data && r.data.name) ? r.data.name : otherName;
+        } catch (e) {
+          finalName = otherName;
+        }
+        finalVal = otherVal;
+      } else if (topVal > 0) {
+        finalVal = topVal;
+      } else {
+        toast('금액 미입력 — AI 예상 비용으로 유지됩니다.');
+        closePriceModal();
+        return;
+      }
+
+      const oldName = found.place.name;   // 이름 변경 전 기준으로 동일 숙소를 찾기 위해 보관
+
+      found.place.name = finalName;
+      found.place.sub = `숙소 · ₩${finalVal.toLocaleString()}`;
+      found.place.actualPrice = finalVal;
+      recalcDayBudget(found.day);
+
+      // ★같은 숙소(이름 동일) 전체 동기화: Day1에서 예약/금액입력하면 Day2 등 동일 숙소도 같이 반영
+      MAP_ITINERARY.forEach((day, di) => {
+        if (!day.places) return;
+        day.places.forEach(pl => {
+          if (pl.type === 'stay' && pl !== found.place
+                  && (pl.name === oldName || pl.name === finalName)) {
+            pl.name = finalName;
+            pl.actualPrice = finalVal;
+            // 출발/조식 등 기존 sub 설명이 있으면 보존하고 금액만 교체
+            pl.sub = pl.sub && pl.sub.includes('·')
+                    ? pl.sub.replace(/₩[\d,]+/, `₩${finalVal.toLocaleString()}`)
+                    : `숙소 · ₩${finalVal.toLocaleString()}`;
+            recalcDayBudget(di);
+          }
+        });
+      });
+
+      closePriceModal();
+
+      const tripId = window._currentTripId || sessionStorage.getItem('plannerDraftId');
+      try {
+        await api.post(`/api/trips/${tripId}/routes/reorder`, MAP_ITINERARY);
+        sessionStorage.setItem('ai_generated_route', JSON.stringify(MAP_ITINERARY));
+        toast('저장되었습니다.');
+        if (typeof initMapPage === 'function') initMapPage();
+      } catch (e) {
+        toast('저장 실패: ' + e.message);
+      }
+    }
+  

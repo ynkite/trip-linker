@@ -1,12 +1,5 @@
 <div th:fragment="budget" xmlns:th="http://www.thymeleaf.org">
-<script>
-  function initLedgerSelector() {
-    const container = document.getElementById('ledger-trip-cards');
-    if (!container) return;
-    container.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">불러오는 중...</div>';
-  }
-  document.addEventListener('DOMContentLoaded', initLedgerSelector);
-</script>
+<script th:src="@{/js/page/page_budget_1.js}"></script>
 
 <div class="page" id="page-ledger">
 
@@ -18,7 +11,7 @@
         <div class="ts-sub">어떤 여행의 가계부를 확인하시겠습니까?</div>
         <div id="ledger-trip-cards"></div>
         <div id="ledger-card-pager"></div>
-        <button class="btn-next" style="width:100%;margin-top:14px" onclick="goLedger2()">
+        <button class="btn-next" style="width:100%;margin-top:14px" data-onclick="goLedger2()">
           선택한 여행 가계부 보기 →
         </button>
       </div>
@@ -33,15 +26,15 @@
       <div class="ledger-hero-inner">
         <div class="ledger-hero-row">
           <div>
-            <button onclick="returnToLedgerSelector()" class="ledger-back-btn">← 다른 여행 선택</button>
+            <button data-onclick="returnToLedgerSelector()" class="ledger-back-btn">← 다른 여행 선택</button>
             <div class="ldh-label">BUDGET · EXPENSE REPORT</div>
             <h2 class="ldh-title">가계부</h2>
             <p id="ledger-trip-meta" class="ldh-meta"></p>
             <p id="ledger-trip-dest" class="ldh-dest"></p>
           </div>
           <div class="ledger-header-export">
-            <button class="btn-export-header" onclick="exportBudgetPDF()">📄 PDF</button>
-            <button class="btn-export-header" onclick="exportBudgetCSV()">📊 Excel</button>
+            <button class="btn-export-header" data-onclick="exportBudgetPDF()">📄 PDF</button>
+            <button class="btn-export-header" data-onclick="exportBudgetCSV()">📊 Excel</button>
           </div>
         </div>
       </div>
@@ -72,8 +65,8 @@
 
       <!-- 탭 네비게이션 -->
       <div class="ledger-tabs">
-        <button class="ledger-tab on" onclick="switchLedgerTab('charts', this)">📊 그래프</button>
-        <button class="ledger-tab" onclick="switchLedgerTab('history', this)">📝 지출 내역</button>
+        <button class="ledger-tab on" data-onclick="switchLedgerTab('charts', this)">📊 그래프</button>
+        <button class="ledger-tab" data-onclick="switchLedgerTab('history', this)">📝 지출 내역</button>
       </div>
 
       <!-- 탭1: 그래프 -->
@@ -137,7 +130,7 @@
               <select id="ledger-exp-cat"></select>
               <input type="date" id="ledger-exp-date" style="flex:0 0 auto;padding:8px 8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;outline:none;background:var(--surface);color:var(--text)">
               <input type="number" placeholder="금액 (원)" id="ledger-exp-amount" min="0">
-              <button class="btn-add-exp" onclick="addLedgerExpense()">추가</button>
+              <button class="btn-add-exp" data-onclick="addLedgerExpense()">추가</button>
             </div>
             <input type="text" placeholder="메모 (선택)" id="ledger-exp-memo"
               style="margin-top:8px;width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;outline:none;background:var(--surface);color:var(--text)">
